@@ -1,0 +1,542 @@
+// Chat em Tempo Real — VaptVupt
+// Mensagens entre cliente e prestador vinculadas a uma solicitação
+// Powered by Firestore onSnapshot — zero polling
+
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Image,
+} from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
+import { useAuthStore } from "@/store/useAuthStore";
+import {
+  getOrCreateChat,
+  sendMessage,
+  subscribeMessages,
+  markMessagesRead,
+  ChatMessage,
+  getUser,
+  UserData,
+} from "@/lib/database";
+
+export default function ChatScreen() {
+  // id = requestId, pid = providerId
+  const { id: requestId, pid: providerId } = useLocalSearchParams<{
+    id: string;
+    pid: string;
+  }>();
+  const { user } = useAuthStore();
+
+  const [chatId, setChatId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputText, setInputText] = useState("");
+  const [otherUser, setOtherUser] = useState<UserData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+
+  const flatListRef = useRef<FlatList>(null);
+
+  // Inicializa o chat e carrega dados do outro participante
+  useEffect(() => {
+    const init = async () => {
+      if (!requestId || !providerId || !user?.uid) return;
+
+      // Determina o client/provider IDs
+      const clientId = user.role === "client" ? user.uid : providerId;
+      const provId = user.role === "provider" ? user.uid : providerId;
+
+      // Cria ou busca chat existente
+      const cid = await getOrCreateChat(requestId, clientId, provId);
+      setChatId(cid);
+
+      // Carrega dados do outro usuário para exibição
+      const otherId = user.role === "client" ? provId : clientId;
+      const other = await getUser(otherId);
+      setOtherUser(other);
+
+      setIsLoading(false);
+    };
+    init();
+  }, [requestId, providerId, user]);
+
+  // Escuta mensagens em tempo real quando chatId está disponível
+  useEffect(() => {
+    if (!chatId) return;
+
+    const unsubscribe = subscribeMessages(chatId, (msgs) => {
+      setMessages(msgs);
+      // Scroll para o final ao receber novas mensagens
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+    });
+
+    // Marca mensagens como lidas ao entrar no chat
+    if (user?.uid) {
+      markMessagesRead(chatId, user.uid);
+    }
+
+    return unsubscribe;
+  }, [chatId, user?.uid]);
+
+  const handleSend = useCallback(async () => {
+    const text = inputText.trim();
+    if (!text || !chatId || !user) return;
+
+    setInputText("");
+    setIsSending(true);
+    try {
+      await sendMessage(chatId, {
+        chatId,
+        senderId: user.uid,
+        senderName: user.name,
+        text,
+        read: false,
+      });
+    } catch {
+      // Recoloca o texto em caso de erro
+      setInputText(text);
+    } finally {
+      setIsSending(false);
+    }
+  }, [inputText, chatId, user]);
+
+  // Formata timestamp
+  const formatTime = (createdAt: any): string => {
+    if (!createdAt) return "";
+    try {
+      const date = new Date(createdAt);
+      return date.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "";
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <ActivityIndicator
+          color={colors.primaryContainer}
+          style={{ marginTop: 80 }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      {/* ======================== */}
+      {/* HEADER DO CHAT */}
+      {/* ======================== */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Text style={styles.backIcon}>←</Text>
+        </TouchableOpacity>
+
+        {/* Avatar + nome do outro participante */}
+        <View style={styles.headerUserInfo}>
+          <View style={styles.headerAvatar}>
+            {otherUser?.photoUrl ? (
+              <Image
+                source={{ uri: otherUser.photoUrl }}
+                style={styles.headerAvatarImg}
+              />
+            ) : (
+              <Text style={styles.headerAvatarInitial}>
+                {otherUser?.name?.charAt(0)?.toUpperCase() || "?"}
+              </Text>
+            )}
+          </View>
+          <View>
+            <Text style={styles.headerName}>
+              {otherUser?.name || "Carregando..."}
+            </Text>
+            <Text style={styles.headerRole}>
+              {otherUser?.role === "provider" ? "🔧 Prestador" : "👤 Cliente"}
+            </Text>
+          </View>
+        </View>
+
+        {/* Indicador de tempo real */}
+        <View style={styles.liveIndicator}>
+          <View style={styles.liveDot} />
+          <Text style={styles.liveText}>ao vivo</Text>
+        </View>
+      </View>
+
+      {/* ======================== */}
+      {/* LISTA DE MENSAGENS */}
+      {/* ======================== */}
+      <FlatList
+        ref={flatListRef}
+        data={messages}
+        keyExtractor={(item) => item.id || Math.random().toString()}
+        contentContainerStyle={styles.messagesList}
+        showsVerticalScrollIndicator={false}
+        onContentSizeChange={() =>
+          flatListRef.current?.scrollToEnd({ animated: false })
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyChat}>
+            <Text style={styles.emptyChatEmoji}>💬</Text>
+            <Text style={styles.emptyChatText}>
+              Nenhuma mensagem ainda.{"\n"}Diga olá para começar!
+            </Text>
+          </View>
+        }
+        renderItem={({ item, index }) => {
+          const isOwn = item.senderId === user?.uid;
+          const prevMsg = index > 0 ? messages[index - 1] : null;
+          const showAvatar = !isOwn && prevMsg?.senderId !== item.senderId;
+          const showTime =
+            index === messages.length - 1 ||
+            messages[index + 1]?.senderId !== item.senderId;
+
+          return (
+            <View
+              style={[
+                styles.messageRow,
+                isOwn ? styles.messageRowOwn : styles.messageRowOther,
+              ]}
+            >
+              {/* Avatar do outro usuário (agrupado) */}
+              {!isOwn && (
+                <View style={styles.msgAvatar}>
+                  {showAvatar ? (
+                    <Text style={styles.msgAvatarText}>
+                      {otherUser?.name?.charAt(0)?.toUpperCase() || "?"}
+                    </Text>
+                  ) : null}
+                </View>
+              )}
+
+              {/* Bubble da mensagem */}
+              <View style={styles.messageBubbleWrapper}>
+                <View
+                  style={[
+                    styles.messageBubble,
+                    isOwn
+                      ? styles.messageBubbleOwn
+                      : styles.messageBubbleOther,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.messageText,
+                      isOwn
+                        ? styles.messageTextOwn
+                        : styles.messageTextOther,
+                    ]}
+                  >
+                    {item.text}
+                  </Text>
+                </View>
+
+                {/* Timestamp + status de leitura */}
+                {showTime && (
+                  <View
+                    style={[
+                      styles.messageMetaRow,
+                      isOwn ? styles.messageMetaOwn : styles.messageMetaOther,
+                    ]}
+                  >
+                    <Text style={styles.messageTime}>
+                      {formatTime(item.createdAt)}
+                    </Text>
+                    {isOwn && (
+                      <Text style={styles.readStatus}>
+                        {item.read ? "✓✓" : "✓"}
+                      </Text>
+                    )}
+                  </View>
+                )}
+              </View>
+            </View>
+          );
+        }}
+      />
+
+      {/* ======================== */}
+      {/* INPUT DE MENSAGEM */}
+      {/* ======================== */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <View style={styles.inputBar}>
+          <TextInput
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder="Escreva uma mensagem..."
+            placeholderTextColor={colors.onSurfacePlaceholder}
+            style={styles.textInput}
+            multiline
+            maxLength={500}
+            returnKeyType="send"
+            onSubmitEditing={handleSend}
+            blurOnSubmit={false}
+          />
+          <TouchableOpacity
+            style={[
+              styles.sendBtn,
+              (!inputText.trim() || isSending) && styles.sendBtnDisabled,
+            ]}
+            onPress={handleSend}
+            disabled={!inputText.trim() || isSending}
+            activeOpacity={0.8}
+          >
+            {isSending ? (
+              <ActivityIndicator size="small" color={colors.onPrimary} />
+            ) : (
+              <Text style={styles.sendBtnIcon}>↑</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.baseSurface,
+  },
+
+  // ========================
+  // HEADER
+  // ========================
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surfaceLowest,
+    gap: spacing.sm,
+    ...shadows.card,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surfaceHigh,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  backIcon: {
+    fontSize: 18,
+    color: colors.onSurface,
+  },
+  headerUserInfo: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primaryContainer,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  headerAvatarImg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  headerAvatarInitial: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.sizes.bodyMd,
+    color: colors.onPrimary,
+  },
+  headerName: {
+    fontFamily: typography.headline,
+    fontSize: typography.sizes.bodyMd,
+    color: colors.onSurface,
+  },
+  headerRole: {
+    fontFamily: typography.body,
+    fontSize: typography.sizes.caption,
+    color: colors.onSurfaceMuted,
+  },
+  liveIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#4caf50",
+  },
+  liveText: {
+    fontFamily: typography.body,
+    fontSize: typography.sizes.caption,
+    color: colors.onSurfaceMuted,
+  },
+
+  // ========================
+  // MENSAGENS
+  // ========================
+  messagesList: {
+    flexGrow: 1,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+    gap: 4,
+  },
+  emptyChat: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 80,
+    gap: spacing.md,
+  },
+  emptyChatEmoji: {
+    fontSize: 48,
+  },
+  emptyChatText: {
+    fontFamily: typography.body,
+    fontSize: typography.sizes.bodyMd,
+    color: colors.onSurfaceMuted,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+
+  messageRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    marginVertical: 2,
+  },
+  messageRowOwn: {
+    justifyContent: "flex-end",
+  },
+  messageRowOther: {
+    justifyContent: "flex-start",
+  },
+
+  msgAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceHigh,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: spacing.xs,
+  },
+  msgAvatarText: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.sizes.caption,
+    color: colors.onSurfaceVariant,
+  },
+
+  messageBubbleWrapper: {
+    maxWidth: "75%",
+    gap: 2,
+  },
+  messageBubble: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+  },
+  messageBubbleOwn: {
+    backgroundColor: colors.primaryContainer,
+    borderBottomRightRadius: 4,
+  },
+  messageBubbleOther: {
+    backgroundColor: colors.surfaceLowest,
+    borderBottomLeftRadius: 4,
+    ...shadows.card,
+  },
+  messageText: {
+    fontFamily: typography.body,
+    fontSize: typography.sizes.bodyMd,
+    lineHeight: 20,
+  },
+  messageTextOwn: {
+    color: colors.onPrimary,
+  },
+  messageTextOther: {
+    color: colors.onSurface,
+  },
+
+  messageMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  messageMetaOwn: {
+    justifyContent: "flex-end",
+  },
+  messageMetaOther: {
+    justifyContent: "flex-start",
+  },
+  messageTime: {
+    fontFamily: typography.body,
+    fontSize: typography.sizes.caption,
+    color: colors.onSurfaceMuted,
+  },
+  readStatus: {
+    fontFamily: typography.body,
+    fontSize: typography.sizes.caption,
+    color: colors.onSurfaceMuted,
+  },
+
+  // ========================
+  // INPUT BAR
+  // ========================
+  inputBar: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    paddingBottom: Platform.OS === "ios" ? spacing.md : spacing.sm,
+    backgroundColor: colors.surfaceLowest,
+    gap: spacing.sm,
+    borderTopWidth: 0,
+    ...shadows.card,
+  },
+  textInput: {
+    flex: 1,
+    backgroundColor: colors.surfaceHigh,
+    borderRadius: radius.xl,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    paddingTop: spacing.sm,
+    fontFamily: typography.body,
+    fontSize: typography.sizes.bodyMd,
+    color: colors.onSurface,
+    maxHeight: 120,
+    minHeight: 44,
+  },
+  sendBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primaryContainer,
+    justifyContent: "center",
+    alignItems: "center",
+    ...shadows.float,
+  },
+  sendBtnDisabled: {
+    opacity: 0.4,
+  },
+  sendBtnIcon: {
+    fontSize: 20,
+    color: colors.onPrimary,
+    fontFamily: typography.bodyBold,
+  },
+});
