@@ -1,0 +1,1274 @@
+{
+  "metadata": {
+    "project_name": "VaptVupt Transformation Prompt",
+    "source_app": "adrianhajdin/uber",
+    "source_type": "React Native Expo Uber clone",
+    "target_product": "VaptVupt",
+    "language": "pt-BR",
+    "format": "json",
+    "intent": "Transform the Uber clone into a geolocation-based services marketplace",
+    "created_for": "Antigravity"
+  },
+  "references": {
+    "github_repo": "adrianhajdin/uber",
+    "design_system_file": "DESIGN.md",
+    "mvp_document": "vaptvupt-mvp.pdf",
+    "screen_document": "tds telas.pdf"
+  },
+  "source_analysis": {
+    "repo_summary": "The Uber clone uses Expo Router, React Native, maps, auth, and ride-oriented flows that must be pivoted into a services marketplace.",
+    "design_summary": "The design system requires the Kinetic Layer approach: tonal layering, no solid borders, rounded cards, glassmorphism, and orange/blue branding.",
+    "mvp_summary": "The MVP centers on client/provider auth, service description parser, urgent-vs-future detection, real-time nearby providers, request creation, push notifications, and provider accept/decline flow.",
+    "screen_summary": "The PDF screens include onboarding, login, home, search, provider detail, request tracking, rate service, provider dashboard, wallet, profile, and service creation."
+  },
+  "non_negotiable_rules": [
+    "Translate every visible string in the app from English to Portuguese (Brazil).",
+    "Replace all ride-hailing semantics with service marketplace semantics.",
+    "Follow the Kinetic Layer design system strictly.",
+    "Use no 1px borders to define surfaces.",
+    "Do not keep pricing, routing, or driver assignment logic from Uber.",
+    "Maintain a clean, modular, production-ready codebase.",
+    "Prefer real-time Firebase flows over custom server complexity.",
+    "Keep the implementation aligned to the MVP so the app is shippable quickly."
+  ],
+  "brand_voice": {
+    "tone": [
+      "profissional",
+      "direto",
+      "claro",
+      "confiável",
+      "moderno"
+    ],
+    "copy_style": [
+      "Portuguese Brazilian",
+      "short and conversion-focused",
+      "confidence-building",
+      "service-oriented"
+    ]
+  },
+  "design_system": {
+    "name": "The Kinetic Layer",
+    "rules": [
+      "Use surface layering instead of borders.",
+      "Use orange as primary action color.",
+      "Use blue for trust and logistical accents.",
+      "Use glassmorphism on nav bars and floating controls.",
+      "Use large rounded corners on cards and action surfaces.",
+      "Use ambient shadows sparingly and softly.",
+      "Use whitespace as a structural element.",
+      "Use tonal hierarchy to indicate nested content.",
+      "Do not crowd the map.",
+      "Do not use high-contrast heavy shadows."
+    ],
+    "visual_tokens": {
+      "base_surface": "#f9f9f9",
+      "primary": "#ad2c00",
+      "primary_container": "#d83900",
+      "secondary": "#0058bc",
+      "surface_container_lowest": "#ffffff",
+      "surface_container_low": "#fcfcfc",
+      "surface_container": "#f5f5f5",
+      "surface_container_high": "#eeeeee",
+      "surface_container_highest": "#e8e8e8",
+      "on_surface": "#1a1c1c"
+    }
+  },
+  "technology_stack": {
+    "frontend": "React Native Expo",
+    "navigation": "Expo Router",
+    "state": "Zustand",
+    "backend": "Firebase",
+    "auth": "Firebase Auth",
+    "database": "Firestore",
+    "realtime": "Firestore onSnapshot",
+    "location": "expo-location",
+    "notifications": "expo-notifications",
+    "maps": "react-native-maps / Google Maps",
+    "geo_queries": "geofire-common"
+  },
+  "product_model": {
+    "roles": [
+      "client",
+      "provider"
+    ],
+    "core_flow": [
+      "client describes service",
+      "parser detects type and urgency",
+      "map shows nearby providers",
+      "client sends request",
+      "provider accepts or declines",
+      "client tracks status in real time"
+    ]
+  },
+  "screen_order": [
+    {
+      "order": 1,
+      "name": "Introdução / Onboarding",
+      "description": "Fluxo de introdução com 4 telas, botões Próximo e Pular, linguagem em pt-BR.",
+      "notes": [
+        "Mostra proposta de valor do marketplace.",
+        "Usa cards de confiança, qualidade e rapidez.",
+        "Deve parecer premium e simples."
+      ]
+    },
+    {
+      "order": 2,
+      "name": "Login",
+      "description": "Entrada com email, senha, esqueci a senha, login com Google e link para cadastro.",
+      "notes": [
+        "Texto todo em português.",
+        "Concordância com termos e privacidade deve aparecer no rodapé.",
+        "Preservar fluxo de autenticação já existente no app base, mas adaptar para Firebase se necessário."
+      ]
+    },
+    {
+      "order": 3,
+      "name": "Cadastro",
+      "description": "Cadastro com seleção de perfil cliente/prestador.",
+      "notes": [
+        "Salvar role do usuário.",
+        "Prestador deve criar perfil com categorias, disponibilidade e localização.",
+        "Cliente deve ir direto ao fluxo de busca."
+      ]
+    },
+    {
+      "order": 4,
+      "name": "Home do Cliente",
+      "description": "Tela principal com saudação, campo de busca/descrição do serviço, categorias e serviços em destaque.",
+      "notes": [
+        "O que você precisa agora?",
+        "Buscar prestadores",
+        "Home / Search / Requests / Profile"
+      ]
+    },
+    {
+      "order": 5,
+      "name": "Busca de Serviços",
+      "description": "Pesquisa por prestadores próximos com lista, mapa e filtros por categoria.",
+      "notes": [
+        "Mostrar prestadores disponíveis.",
+        "Incluir distância, nota e CTA Solicitar Agora.",
+        "Manter navegação fluida para a tela de detalhe."
+      ]
+    },
+    {
+      "order": 6,
+      "name": "Detalhe do Prestador",
+      "description": "Perfil do profissional com foto, nota, badge premium, preço estimado e botão de solicitação.",
+      "notes": [
+        "Exibir tempo estimado de chegada.",
+        "Incluir avaliação de outros clientes.",
+        "Deixar a decisão de contratação rápida."
+      ]
+    },
+    {
+      "order": 7,
+      "name": "Solicitação / Status",
+      "description": "Tela de acompanhamento do pedido com estados solicitado, aceito e a caminho.",
+      "notes": [
+        "Deve atualizar em tempo real.",
+        "Pode incluir botão de cancelar solicitação.",
+        "Deve trazer contexto do prestador em deslocamento."
+      ]
+    },
+    {
+      "order": 8,
+      "name": "Chat / Contato",
+      "description": "Chat simples ou botão de WhatsApp para comunicação com o prestador.",
+      "notes": [
+        "No MVP, WhatsApp pode substituir chat completo.",
+        "Se o chat existir, deve ser minimalista."
+      ]
+    },
+    {
+      "order": 9,
+      "name": "Rate Service",
+      "description": "Tela de avaliação do serviço após conclusão.",
+      "notes": [
+        "Mostrar prestador, pergunta Como foi o serviço?, campo opcional e enviar avaliação.",
+        "O texto deve ficar em português com tom claro e confiável."
+      ]
+    },
+    {
+      "order": 10,
+      "name": "Dashboard do Prestador",
+      "description": "Home do prestador com ganhos, serviços feitos, toggle de disponível e solicitações próximas.",
+      "notes": [
+        "Receba solicitações em tempo real.",
+        "Mostrar métricas simples e úteis."
+      ]
+    },
+    {
+      "order": 11,
+      "name": "Detalhes de Solicitação do Prestador",
+      "description": "Cartão com serviço, distância, urgência, valor estimado e botões aceitar/recusar.",
+      "notes": [
+        "Ação precisa ser imediata.",
+        "Cores e hierarquia devem passar senso de oportunidade."
+      ]
+    },
+    {
+      "order": 12,
+      "name": "Perfil / Configurações",
+      "description": "Área com modo cliente/modo prestador, saldo, histórico, métodos de pagamento, ajuda e sair.",
+      "notes": [
+        "Perfil deve servir os dois papéis.",
+        "Versão prestador precisa mostrar disponibilidade e resumo de performance."
+      ]
+    },
+    {
+      "order": 13,
+      "name": "Wallet",
+      "description": "Área financeira com saldo disponível, saques e histórico de ganhos.",
+      "notes": [
+        "Pode ser v2, mas o layout deve existir se a prototipação exigir."
+      ]
+    },
+    {
+      "order": 14,
+      "name": "Histórico",
+      "description": "Lista de serviços feitos e finalizados.",
+      "notes": [
+        "Mostrar status pago/finalizado."
+      ]
+    },
+    {
+      "order": 15,
+      "name": "Detalhe de Serviço do Prestador",
+      "description": "Passo a passo de anúncio/serviço com título, categoria, descrição, fotos e preço base.",
+      "notes": [
+        "No PDF aparece como passo 2 de 4.",
+        "Se o app base não tiver esse fluxo, criar do zero."
+      ]
+    }
+  ],
+  "ui_translation_dictionary": [
+    {
+      "en": "Get Started",
+      "pt": "Comece agora"
+    },
+    {
+      "en": "Next",
+      "pt": "Próximo"
+    },
+    {
+      "en": "Skip",
+      "pt": "Pular"
+    },
+    {
+      "en": "Login",
+      "pt": "Entrar"
+    },
+    {
+      "en": "Sign Up",
+      "pt": "Criar conta"
+    },
+    {
+      "en": "Email",
+      "pt": "Email"
+    },
+    {
+      "en": "Password",
+      "pt": "Senha"
+    },
+    {
+      "en": "Forgot Password?",
+      "pt": "Esqueceu a senha?"
+    },
+    {
+      "en": "Search",
+      "pt": "Buscar"
+    },
+    {
+      "en": "Home",
+      "pt": "Início"
+    },
+    {
+      "en": "Requests",
+      "pt": "Solicitações"
+    },
+    {
+      "en": "Profile",
+      "pt": "Perfil"
+    },
+    {
+      "en": "Wallet",
+      "pt": "Carteira"
+    },
+    {
+      "en": "Settings",
+      "pt": "Configurações"
+    },
+    {
+      "en": "Available now",
+      "pt": "Disponível agora"
+    },
+    {
+      "en": "Accept Now",
+      "pt": "Aceitar agora"
+    },
+    {
+      "en": "View Details",
+      "pt": "Ver detalhes"
+    },
+    {
+      "en": "Cancel Request",
+      "pt": "Cancelar solicitação"
+    },
+    {
+      "en": "Send Review",
+      "pt": "Enviar avaliação"
+    },
+    {
+      "en": "What do you need?",
+      "pt": "O que você precisa agora?"
+    },
+    {
+      "en": "Find providers nearby",
+      "pt": "Encontrar prestadores perto de você"
+    },
+    {
+      "en": "Terms of Service",
+      "pt": "Termos de Serviço"
+    },
+    {
+      "en": "Privacy Policy",
+      "pt": "Política de Privacidade"
+    },
+    {
+      "en": "Provider",
+      "pt": "Prestador"
+    },
+    {
+      "en": "Client",
+      "pt": "Cliente"
+    },
+    {
+      "en": "Urgent",
+      "pt": "Urgente"
+    },
+    {
+      "en": "Today",
+      "pt": "Hoje"
+    },
+    {
+      "en": "Now",
+      "pt": "Agora"
+    },
+    {
+      "en": "Accepted",
+      "pt": "Aceito"
+    },
+    {
+      "en": "Declined",
+      "pt": "Recusado"
+    },
+    {
+      "en": "Pending",
+      "pt": "Pendente"
+    },
+    {
+      "en": "On the way",
+      "pt": "A caminho"
+    }
+  ],
+  "file_transformation_map": [
+    {
+      "old": "app/(auth)/login.tsx",
+      "new": "app/(auth)/login.tsx",
+      "action": "adapt to VaptVupt and translate all text"
+    },
+    {
+      "old": "app/(auth)/register.tsx",
+      "new": "app/(auth)/register.tsx",
+      "action": "add role selection and Firebase profile creation"
+    },
+    {
+      "old": "app/(tabs)/home.tsx",
+      "new": "app/(client)/index.tsx",
+      "action": "replace ride home with service request home"
+    },
+    {
+      "old": "app/(tabs)/search.tsx",
+      "new": "app/(client)/map.tsx",
+      "action": "convert destination search into nearby provider search"
+    },
+    {
+      "old": "app/(tabs)/rides.tsx",
+      "new": "app/(client)/request/[id].tsx",
+      "action": "convert rides/status flow into service request tracking"
+    },
+    {
+      "old": "app/(tabs)/profile.tsx",
+      "new": "app/(client)/profile.tsx",
+      "action": "convert to dual-role profile area"
+    },
+    {
+      "old": "components/Map.tsx",
+      "new": "components/ProviderMap.tsx",
+      "action": "show providers, client location and request pins"
+    },
+    {
+      "old": "components/LocationSearch.tsx",
+      "new": "components/ServiceNoteInput.tsx",
+      "action": "replace address search with service description input"
+    },
+    {
+      "old": "components/TripCard.tsx",
+      "new": "components/RequestCard.tsx",
+      "action": "convert trip card to request card"
+    },
+    {
+      "old": "lib/api.ts",
+      "new": "lib/firebase.ts and lib/requests.ts",
+      "action": "remove ride API and create Firebase request logic"
+    },
+    {
+      "old": "store/useStore.ts",
+      "new": "store/useAuthStore.ts",
+      "action": "keep global auth state and role management"
+    },
+    {
+      "old": "constants",
+      "new": "constants/localization.ts",
+      "action": "centralize pt-BR strings and UI copy"
+    }
+  ],
+  "components_to_create_or_refactor": [
+    {
+      "name": "AppHeader",
+      "purpose": "Cabeçalho translúcido com título, subtítulo e ação contextual.",
+      "props": [
+        "title",
+        "subtitle",
+        "rightAction",
+        "variant"
+      ],
+      "rules": [
+        "Use glassmorphism.",
+        "No hard borders.",
+        "Keep spacing generous."
+      ]
+    },
+    {
+      "name": "PrimaryButton",
+      "purpose": "CTA principal com gradiente laranja e texto branco.",
+      "props": [
+        "label",
+        "onPress",
+        "loading",
+        "disabled"
+      ],
+      "rules": [
+        "Rounded full.",
+        "Subtle shadow.",
+        "Accessible hit area."
+      ]
+    },
+    {
+      "name": "ProviderCard",
+      "purpose": "Cartão do prestador com nota, distância, categoria e CTA.",
+      "props": [
+        "name",
+        "rating",
+        "distance",
+        "category",
+        "price",
+        "image",
+        "status"
+      ],
+      "rules": [
+        "Use tonal surfaces.",
+        "Highlight urgency or live status.",
+        "Show trust elements."
+      ]
+    },
+    {
+      "name": "RequestStatusTimeline",
+      "purpose": "Linha de status do pedido com passos solicitado, aceito e a caminho.",
+      "props": [
+        "status",
+        "providerName",
+        "eta"
+      ],
+      "rules": [
+        "Should update in real time.",
+        "Use clear Portuguese copy."
+      ]
+    },
+    {
+      "name": "ServiceNoteInput",
+      "purpose": "Campo para descrever o serviço em linguagem natural.",
+      "props": [
+        "value",
+        "onChange",
+        "placeholder",
+        "multiline"
+      ],
+      "rules": [
+        "Parser keyword-based.",
+        "Support urgency detection."
+      ]
+    }
+  ],
+  "data_model": {
+    "users": {
+      "fields": [
+        "name",
+        "email",
+        "role",
+        "fcmToken",
+        "createdAt"
+      ]
+    },
+    "providers": {
+      "fields": [
+        "name",
+        "categories",
+        "location",
+        "geohash",
+        "available",
+        "rating",
+        "photoUrl",
+        "bio",
+        "basePrice"
+      ]
+    },
+    "service_requests": {
+      "fields": [
+        "clientId",
+        "providerId",
+        "serviceType",
+        "description",
+        "isUrgent",
+        "location",
+        "status",
+        "createdAt",
+        "respondedAt"
+      ]
+    },
+    "reviews": {
+      "fields": [
+        "requestId",
+        "clientId",
+        "providerId",
+        "rating",
+        "comment",
+        "createdAt"
+      ]
+    }
+  },
+  "implementation_plan": {
+    "phases": [
+      {
+        "name": "Discovery and cleanup",
+        "goal": "Inspect the Uber clone and delete ride-hailing assumptions without touching reusable foundations.",
+        "subtasks": [
+          "Map the whole repository.",
+          "Find ride-specific strings, screens, hooks, functions and services.",
+          "Mark reusable UI and navigation primitives.",
+          "Plan the new VaptVupt routes."
+        ]
+      },
+      {
+        "name": "Architecture pivot",
+        "goal": "Reframe the app as a marketplace instead of a mobility app.",
+        "subtasks": [
+          "Define the client/provider roles.",
+          "Define Firestore collections.",
+          "Define request lifecycle states.",
+          "Define location update strategy."
+        ]
+      },
+      {
+        "name": "Screen conversion",
+        "goal": "Rebuild the UI around the PDF screens in the correct product order.",
+        "subtasks": [
+          "Onboarding.",
+          "Auth.",
+          "Home.",
+          "Search and map.",
+          "Provider detail.",
+          "Request status.",
+          "Provider dashboard.",
+          "Profile and wallet."
+        ]
+      },
+      {
+        "name": "Localization",
+        "goal": "Translate the entire app to pt-BR and adapt microcopy for trust and conversion.",
+        "subtasks": [
+          "Translate labels.",
+          "Translate placeholders.",
+          "Translate empty states.",
+          "Translate alerts and toasts.",
+          "Translate legal copy."
+        ]
+      },
+      {
+        "name": "Polish and validation",
+        "goal": "Make the app feel premium, usable, and ready for demo or launch.",
+        "subtasks": [
+          "Tune spacing and visual hierarchy.",
+          "Verify map usability.",
+          "Verify onboarding and auth.",
+          "Verify request flow.",
+          "Verify provider acceptance flow."
+        ]
+      }
+    ]
+  },
+  "implementation_steps": [],
+  "quality_gates": [
+    {
+      "id": 1,
+      "check": "QA gate 1: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 2,
+      "check": "QA gate 2: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 3,
+      "check": "QA gate 3: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 4,
+      "check": "QA gate 4: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 5,
+      "check": "QA gate 5: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 6,
+      "check": "QA gate 6: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 7,
+      "check": "QA gate 7: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 8,
+      "check": "QA gate 8: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 9,
+      "check": "QA gate 9: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 10,
+      "check": "QA gate 10: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 11,
+      "check": "QA gate 11: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 12,
+      "check": "QA gate 12: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 13,
+      "check": "QA gate 13: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 14,
+      "check": "QA gate 14: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 15,
+      "check": "QA gate 15: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 16,
+      "check": "QA gate 16: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 17,
+      "check": "QA gate 17: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 18,
+      "check": "QA gate 18: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 19,
+      "check": "QA gate 19: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 20,
+      "check": "QA gate 20: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 21,
+      "check": "QA gate 21: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 22,
+      "check": "QA gate 22: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 23,
+      "check": "QA gate 23: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 24,
+      "check": "QA gate 24: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 25,
+      "check": "QA gate 25: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 26,
+      "check": "QA gate 26: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 27,
+      "check": "QA gate 27: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 28,
+      "check": "QA gate 28: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 29,
+      "check": "QA gate 29: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 30,
+      "check": "QA gate 30: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 31,
+      "check": "QA gate 31: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 32,
+      "check": "QA gate 32: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 33,
+      "check": "QA gate 33: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 34,
+      "check": "QA gate 34: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 35,
+      "check": "QA gate 35: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 36,
+      "check": "QA gate 36: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 37,
+      "check": "QA gate 37: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 38,
+      "check": "QA gate 38: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 39,
+      "check": "QA gate 39: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 40,
+      "check": "QA gate 40: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 41,
+      "check": "QA gate 41: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 42,
+      "check": "QA gate 42: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 43,
+      "check": "QA gate 43: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 44,
+      "check": "QA gate 44: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 45,
+      "check": "QA gate 45: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 46,
+      "check": "QA gate 46: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 47,
+      "check": "QA gate 47: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 48,
+      "check": "QA gate 48: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 49,
+      "check": "QA gate 49: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 50,
+      "check": "QA gate 50: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 51,
+      "check": "QA gate 51: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 52,
+      "check": "QA gate 52: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 53,
+      "check": "QA gate 53: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 54,
+      "check": "QA gate 54: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 55,
+      "check": "QA gate 55: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 56,
+      "check": "QA gate 56: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 57,
+      "check": "QA gate 57: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 58,
+      "check": "QA gate 58: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 59,
+      "check": "QA gate 59: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    },
+    {
+      "id": 60,
+      "check": "QA gate 60: validar consistência visual, lógica e textual em pt-BR.",
+      "must_pass": true,
+      "notes": [
+        "Sem borders sólidos.",
+        "Sem copy em inglês na UI.",
+        "Sem fluxos de corrida/driver/ride."
+      ]
+    }
+  ],
+  "acceptance_criteria": [
+    "Concluir um app VaptVupt funcional, bonito e escalável.",
+    "Preservar apenas o que for útil do clone Uber.",
+    "Reescrever completamente o domínio, a linguagem e o fluxo.",
+    "Focar em monetização, velocidade de entrega e clareza operacional."
+  ],
+  "guardrails": {
+    "must_remove_from_uber_clone": [
+      "driver",
+      "ride",
+      "trip",
+      "fare",
+      "destination",
+      "pickup",
+      "dropoff",
+      "route",
+      "eta as ride ETA",
+      "car-specific flow",
+      "Stripe ride payments"
+    ],
+    "must_keep_if_usable": [
+      "Expo Router structure",
+      "map rendering infrastructure",
+      "location permissions",
+      "state management patterns",
+      "auth scaffolding",
+      "reusable cards and sheets"
+    ]
+  },
+  "requested_output": {
+    "deliverable_type": "complete transformed app",
+    "response_style": "step by step and implementation oriented",
+    "include_comments_in_code": true,
+    "prefer_files": [
+      "app",
+      "components",
+      "hooks",
+      "lib",
+      "store",
+      "constants"
+    ]
+  },
+  "special_instructions": [
+    "Keep route grouping clean and intentional.",
+    "Maintain consistent naming across files, UI and data.",
+    "When in doubt, choose simpler MVP logic over complex enterprise logic.",
+    "Do not overbuild chat, background tracking or multi-provider broadcast in the MVP.",
+    "Make the app demo-friendly and investor-friendly.",
+    "Ensure the UI feels local, premium and trustworthy."
+  ]
+}

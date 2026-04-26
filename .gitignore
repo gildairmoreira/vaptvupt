@@ -22,10 +22,7 @@ expo-env.d.ts
 # env
 .env
 
-# Lixo e Referências
-%ProgramData%/
-_references/
+# Pastas Antigas / Lixo
 uber/
 Ridewave/
-CONTEXT/
-design/
+%ProgramData%/
