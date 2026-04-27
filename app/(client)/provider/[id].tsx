@@ -1,7 +1,7 @@
 // Detalhe do Prestador — VaptVupt
 import React, { useEffect, useState } from "react";
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Image,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Image, TextInput,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -23,6 +23,7 @@ export default function ProviderDetail() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -51,7 +52,8 @@ export default function ProviderDetail() {
       selectProvider(provider);
       const requestId = await sendRequest(
         user.uid,
-        { latitude: userLocation[0], longitude: userLocation[1] }
+        { latitude: userLocation[0], longitude: userLocation[1] },
+        message
       );
       router.push(`/(client)/request/${requestId}`);
     } catch {
@@ -62,8 +64,8 @@ export default function ProviderDetail() {
   };
 
   if (isLoading) return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ActivityIndicator color={colors.primaryContainer} style={{ marginTop: 80 }} />
+    <SafeAreaView style={styles.loaderContainer}>
+      <ActivityIndicator size="large" color={colors.primaryContainer} />
     </SafeAreaView>
   );
   if (!provider) return null;
@@ -164,6 +166,17 @@ export default function ProviderDetail() {
 
       {/* Botão fixo de solicitar */}
       <View style={styles.ctaContainer}>
+        <View style={styles.messageBox}>
+          <Text style={styles.sectionTitle}>Mensagem Adicional (Opcional)</Text>
+          <TextInput
+            placeholder="Ex: Trazer escada, portão marrom, etc."
+            value={message}
+            onChangeText={setMessage}
+            style={styles.messageInput}
+            multiline
+          />
+        </View>
+
         <TouchableOpacity
           style={[styles.requestBtn, (!provider.available || isSending) && styles.requestBtnDisabled]}
           onPress={handleRequest}
@@ -183,10 +196,11 @@ export default function ProviderDetail() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.baseSurface },
+  loaderContainer: { flex: 1, backgroundColor: colors.baseSurface, justifyContent: "center", alignItems: "center" },
   scroll: { flexGrow: 1, paddingHorizontal: spacing.xl },
   header: { paddingTop: spacing.base, paddingBottom: spacing.md },
-  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surfaceHigh, justifyContent: "center", alignItems: "center" },
-  backIcon: { fontSize: 18, color: colors.onSurface },
+  backBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceHigh, justifyContent: "center", alignItems: "center", ...shadows.card },
+  backIcon: { fontSize: 20, color: colors.onSurface, textAlign: "center", textAlignVertical: "center" },
   avatarSection: { alignItems: "center", paddingVertical: spacing.xl },
   avatarWrapper: { position: "relative", marginBottom: spacing.md },
   avatar: { width: 100, height: 100, borderRadius: 50 },
@@ -200,9 +214,9 @@ const styles = StyleSheet.create({
   ratingRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   ratingText: { fontFamily: typography.headline, fontSize: typography.sizes.bodyMd, color: colors.onSurface },
   reviewCount: { fontFamily: typography.body, fontSize: typography.sizes.bodySm, color: colors.onSurfaceMuted },
-  categoriesRow: { marginBottom: spacing.xl },
-  catChip: { backgroundColor: colors.surfaceHigh, paddingHorizontal: 14, paddingVertical: 6, borderRadius: radius.full, marginRight: spacing.sm },
-  catChipText: { fontFamily: typography.label, fontSize: typography.sizes.bodySm, color: colors.onSurfaceVariant, textTransform: "capitalize" },
+  categoriesRow: { paddingVertical: spacing.md, marginBottom: spacing.lg },
+  catChip: { backgroundColor: colors.primaryContainer + "15", paddingHorizontal: 16, paddingVertical: 8, borderRadius: radius.full, marginRight: spacing.sm, borderWidth: 1, borderColor: colors.primaryContainer + "30" },
+  catChipText: { fontFamily: typography.bodyBold, fontSize: 13, color: colors.primaryContainer, textTransform: "capitalize" },
   infoRow: { flexDirection: "row", gap: spacing.md, marginBottom: spacing.xl },
   infoCard: { flex: 1, backgroundColor: colors.surfaceLowest, borderRadius: radius.lg, padding: spacing.md, alignItems: "center", gap: 4, ...shadows.card },
   infoLabel: { fontFamily: typography.body, fontSize: typography.sizes.caption, color: colors.onSurfaceMuted },
@@ -214,8 +228,10 @@ const styles = StyleSheet.create({
   reviewCard: { backgroundColor: colors.surfaceLowest, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm, gap: 4, ...shadows.card },
   reviewStars: { fontSize: 14 },
   reviewComment: { fontFamily: typography.body, fontSize: typography.sizes.bodySm, color: colors.onSurfaceVariant },
-  ctaContainer: { position: "absolute", bottom: 0, left: 0, right: 0, padding: spacing.xl, backgroundColor: "rgba(249,249,249,0.95)", borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl },
-  requestBtn: { backgroundColor: colors.primaryContainer, borderRadius: radius.full, paddingVertical: 18, alignItems: "center" },
+  ctaContainer: { padding: spacing.xl, backgroundColor: colors.surfaceLowest, borderTopWidth: 1, borderTopColor: colors.surfaceHigh },
+  messageBox: { marginBottom: spacing.md },
+  messageInput: { backgroundColor: colors.surfaceHigh, borderRadius: radius.md, padding: spacing.md, height: 80, fontFamily: typography.body, fontSize: 14, color: colors.onSurface, textAlignVertical: "top" },
+  requestBtn: { backgroundColor: colors.primaryContainer, borderRadius: radius.full, paddingVertical: 18, alignItems: "center", ...shadows.card },
   requestBtnDisabled: { opacity: 0.4 },
   requestBtnText: { fontFamily: typography.bodyBold, fontSize: typography.sizes.titleSm, color: colors.onPrimary },
 });

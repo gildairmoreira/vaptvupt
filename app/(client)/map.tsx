@@ -93,11 +93,15 @@ export default function SearchMap() {
 
             var providers = ${providersJson};
             providers.forEach(function(p) {
-              var iconHtml = '<div class="marker-badge" onclick="window.ReactNativeWebView.postMessage(JSON.stringify({type: \\'MARKER_CLICK\\', uid: \\'' + p.uid + '\\'}))">👤</div>';
-              if (p.categories.includes("cleaning")) iconHtml = '<div class="marker-badge" onclick="window.ReactNativeWebView.postMessage(JSON.stringify({type: \\'MARKER_CLICK\\', uid: \\'' + p.uid + '\\'}))">🧹</div>';
-              if (p.categories.includes("plumbing")) iconHtml = '<div class="marker-badge" onclick="window.ReactNativeWebView.postMessage(JSON.stringify({type: \\'MARKER_CLICK\\', uid: \\'' + p.uid + '\\'}))">🔧</div>';
-              if (p.categories.includes("electrical")) iconHtml = '<div class="marker-badge" onclick="window.ReactNativeWebView.postMessage(JSON.stringify({type: \\'MARKER_CLICK\\', uid: \\'' + p.uid + '\\'}))">⚡</div>';
+              var iconEmoji = '👤';
+              if (p.categories.includes("cleaning")) iconEmoji = '🧹';
+              if (p.categories.includes("plumbing")) iconEmoji = '🔧';
+              if (p.categories.includes("electrical")) iconEmoji = '⚡';
+              if (p.categories.includes("assembly")) iconEmoji = '📦';
+              if (p.categories.includes("painting")) iconEmoji = '🎨';
+              if (p.categories.includes("gardening")) iconEmoji = '🌱';
 
+              var iconHtml = '<div class="marker-badge" onclick="window.ReactNativeWebView.postMessage(JSON.stringify({type: \\'MARKER_CLICK\\', uid: \\'' + p.uid + '\\'}))">' + iconEmoji + '</div>';
               var icon = L.divIcon({ html: iconHtml, className: '', iconSize: [36, 36], iconAnchor: [18, 36] });
               L.marker([p.location.latitude, p.location.longitude], {icon: icon}).addTo(window.map);
             });

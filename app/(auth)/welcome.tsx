@@ -1,7 +1,7 @@
 // Onboarding — VaptVupt
 // 4 slides conforme protótipos: Welcome, Express, Confiança, CTA final
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,15 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, typography, spacing, radius } from "@/constants/theme";
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withRepeat, 
+  withSequence, 
+  withTiming,
+  Easing 
+} from "react-native-reanimated";
+import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
 import { strings } from "@/constants/localization";
 
 const { width, height } = Dimensions.get("window");
@@ -128,8 +136,7 @@ export default function Welcome() {
 // ========================
 function SlideWelcome() {
   return (
-    <View style={[styles.slide, { backgroundColor: "#fff5f0" }]}>
-      {/* Card com logo — glassmorfismo */}
+    <View style={[styles.slide, { backgroundColor: colors.baseSurface }]}>
       <View style={styles.logoCard}>
         <Image
           source={require("../../assets/images/logo-icon.png")}
@@ -153,35 +160,27 @@ function SlideWelcome() {
 function SlideExpress() {
   return (
     <View style={[styles.slide, { backgroundColor: colors.baseSurface }]}>
-      {/* Header com logo + pular */}
       <View style={styles.slideHeader}>
         <Image
           source={require("../../assets/images/logo-icon.png")}
-          style={styles.smallLogo}
+          style={styles.bigLogo}
           resizeMode="contain"
         />
       </View>
 
-      {/* Card de imagem com badges */}
       <View style={styles.imageCardContainer}>
         <View style={styles.imageCard}>
-          {/* Badge EXPRESS */}
           <View style={styles.expressBadge}>
             <Text style={styles.expressBadgeIcon}>⚡</Text>
             <Text style={styles.expressBadgeText}>{strings.onboarding.slide2.badge}</Text>
           </View>
-
-          {/* Placeholder da imagem do scooter */}
           <View style={styles.scooterBg}>
             <Text style={{ fontSize: 80 }}>🛵</Text>
           </View>
-
-          {/* Badge 2 MIN */}
           <View style={styles.etaBadge}>
             <Text style={styles.etaBadgeText}>📍 {strings.onboarding.slide2.etaBadge}</Text>
           </View>
         </View>
-        {/* Sombra decorativa atrás */}
         <View style={styles.imageCardShadow} />
       </View>
 
@@ -200,18 +199,15 @@ function SlideExpress() {
 function SlideTrust() {
   return (
     <View style={[styles.slide, { backgroundColor: colors.baseSurface }]}>
-      {/* Header com logo e X */}
       <View style={styles.slideHeader}>
         <Image
           source={require("../../assets/images/logo-icon.png")}
-          style={styles.smallLogo}
+          style={styles.bigLogo}
           resizeMode="contain"
         />
       </View>
 
-      {/* Cards flutuantes de prestadores */}
       <View style={styles.trustContainer}>
-        {/* Card Ricardo S. — esquerda */}
         <View style={[styles.providerMiniCard, styles.cardLeft]}>
           <View style={styles.providerMiniAvatar}>
             <Text style={{ fontSize: 20 }}>👨‍🔧</Text>
@@ -223,15 +219,12 @@ function SlideTrust() {
           <View style={styles.bgOkBadge}>
             <Text style={styles.bgOkText}>✓ {strings.onboarding.slide3.badge1}</Text>
           </View>
-          <View style={styles.ratingBar} />
         </View>
 
-        {/* Ícone verificado central */}
         <View style={styles.verifiedCenter}>
           <Text style={{ fontSize: 28, color: colors.onPrimary }}>✓</Text>
         </View>
 
-        {/* Card Mariana L. — direita */}
         <View style={[styles.providerMiniCard, styles.cardRight]}>
           <View style={styles.providerMiniAvatar}>
             <Text style={{ fontSize: 20 }}>👩‍💼</Text>
@@ -239,16 +232,6 @@ function SlideTrust() {
           <View>
             <Text style={styles.providerMiniName}>Mariana L.</Text>
             <Text style={styles.verifiedLabel}>{strings.onboarding.slide3.badge2}</Text>
-          </View>
-          <View style={styles.ratingRows}>
-            <View style={styles.ratingRow}>
-              <Text style={styles.ratingLabel}>{strings.onboarding.slide3.label1}</Text>
-              <Text style={styles.ratingValue}>100%</Text>
-            </View>
-            <View style={styles.ratingRow}>
-              <Text style={styles.ratingLabel}>{strings.onboarding.slide3.label2}</Text>
-              <Text style={styles.ratingValue}>5/5</Text>
-            </View>
           </View>
         </View>
       </View>
@@ -267,11 +250,28 @@ function SlideTrust() {
 // SLIDE 4 — CTA FINAL
 // ========================
 function SlideCTA() {
+  const rocketY = useSharedValue(0);
+
+  useEffect(() => {
+    rocketY.value = withRepeat(
+      withSequence(
+        withTiming(-15, { duration: 1500, easing: Easing.bezier(0.4, 0, 0.2, 1) }),
+        withTiming(0, { duration: 1500, easing: Easing.bezier(0.4, 0, 0.2, 1) })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const rocketStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: rocketY.value }],
+  }));
+
   return (
     <View style={[styles.slide, { backgroundColor: "#fff5f0" }]}>
-      <View style={styles.ctaIconContainer}>
+      <Animated.View style={[styles.ctaIconContainer, rocketStyle]}>
         <Text style={{ fontSize: 100 }}>🚀</Text>
-      </View>
+      </Animated.View>
       <View style={styles.textBlock}>
         <Text style={styles.headlineNormal}>{strings.onboarding.slide4.title}</Text>
         <Text style={styles.headlineBrand}>{strings.onboarding.slide4.titleHighlight}</Text>
@@ -306,13 +306,17 @@ const styles = StyleSheet.create({
     width: 80,
     height: 28,
   },
+  bigLogo: {
+    width: 120,
+    height: 40,
+  },
 
   // Logo card (slide 1)
   logoCard: {
     width: 180,
     height: 180,
     borderRadius: radius.xl,
-    backgroundColor: colors.surfaceLowest,
+    backgroundColor: colors.baseSurface,
     justifyContent: "center",
     alignItems: "center",
     marginTop: spacing["2xl"],

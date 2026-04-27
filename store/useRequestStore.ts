@@ -24,7 +24,7 @@ interface RequestState {
   // Ações
   setServiceDescription: (description: string, isUrgent: boolean) => void;
   selectProvider: (provider: ProviderData) => void;
-  sendRequest: (clientId: string, location: { latitude: number, longitude: number }) => Promise<string>;
+  sendRequest: (clientId: string, location: { latitude: number, longitude: number }, message?: string) => Promise<string>;
   cancelRequest: (requestId: string) => Promise<void>;
   subscribeToRequest: (requestId: string) => () => void;
   clearRequest: () => void;
@@ -51,7 +51,7 @@ export const useRequestStore = create<RequestState>((set, get) => ({
   },
 
   // Envia a solicitação para o Firestore
-  sendRequest: async (clientId, location) => {
+  sendRequest: async (clientId, location, message) => {
     const { selectedProvider, serviceDescription, isUrgent } = get();
     if (!selectedProvider) throw new Error("Nenhum prestador selecionado");
 
@@ -66,6 +66,7 @@ export const useRequestStore = create<RequestState>((set, get) => ({
         location,
         status: "pending",
         estimatedPrice: selectedProvider.basePrice,
+        clientMessage: message,
       });
 
       set({ activeRequestId: requestId, isLoading: false });

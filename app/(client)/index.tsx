@@ -25,6 +25,7 @@ export default function ClientHome() {
   
   const [providers, setProviders] = useState<ProviderData[]>([]);
   const [userLocation, setUserLocation] = useState<{ latitude: number, longitude: number } | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<ProviderData | null>(null);
 
   useEffect(() => {
     const requestLocation = async () => {
@@ -43,24 +44,39 @@ export default function ClientHome() {
     return unsubscribe;
   }, []);
 
+  const handleMessage = (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'SELECT_PROVIDER') {
+        setSelectedProvider(data.payload);
+      }
+    } catch (e) {
+      console.error("Error parsing message from webview", e);
+    }
+  };
+
   const handleSearch = () => {
     router.push("/(client)/map");
   };
 
   const centerMap = () => {
-    if (userLocation && webviewRef.current) {
+    const target = selectedProvider?.location || initialLocation;
+    if (target && webviewRef.current) {
       webviewRef.current.injectJavaScript(`
         if (window.map) {
-          window.map.setView([${userLocation.latitude}, ${userLocation.longitude}], 15);
+          window.map.setView([${target.latitude}, ${target.longitude}], 15);
         }
         true;
       `);
     }
   };
 
+  const bhCoords = { latitude: -19.9167, longitude: -43.9345 };
+  const initialLocation = userLocation || bhCoords;
+
   const generateMapHtml = () => {
-    if (!userLocation) return "";
     const providersJson = JSON.stringify(providers.filter(p => p.location));
+    const center = initialLocation;
     return `
       <!DOCTYPE html>
       <html>
@@ -69,7 +85,7 @@ export default function ClientHome() {
           <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
           <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
           <style>
-            body { margin: 0; padding: 0; }
+            body { margin: 0; padding: 0; background-color: ${colors.baseSurface}; }
             #map { width: 100vw; height: 100vh; }
             .leaflet-control-attribution { display: none; }
             
@@ -80,13 +96,14 @@ export default function ClientHome() {
               box-shadow: 0 4px 6px rgba(0,0,0,0.1);
               border: 2px solid ${colors.primaryContainer};
               color: ${colors.primaryContainer};
+              font-size: 20px;
             }
           </style>
         </head>
         <body>
           <div id="map"></div>
           <script>
-            window.map = L.map('map', { zoomControl: false }).setView([${userLocation.latitude}, ${userLocation.longitude}], 15);
+            window.map = L.map('map', { zoomControl: false }).setView([${center.latitude}, ${center.longitude}], 15);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(window.map);
             
             var userIcon = L.divIcon({
@@ -95,17 +112,25 @@ export default function ClientHome() {
               iconSize: [22, 22],
               iconAnchor: [11, 11]
             });
-            L.marker([${userLocation.latitude}, ${userLocation.longitude}], {icon: userIcon}).addTo(window.map);
+            L.marker([${center.latitude}, ${center.longitude}], {icon: userIcon}).addTo(window.map);
 
             var providers = ${providersJson};
             providers.forEach(function(p) {
-              var iconHtml = '<div class="marker-badge">👤</div>';
-              if (p.categories.includes("cleaning")) iconHtml = '<div class="marker-badge">🧹</div>';
-              if (p.categories.includes("plumbing")) iconHtml = '<div class="marker-badge">🔧</div>';
-              if (p.categories.includes("electrical")) iconHtml = '<div class="marker-badge">⚡</div>';
+              var iconEmoji = '👤';
+              if (p.categories.includes("cleaning")) iconEmoji = '🧹';
+              if (p.categories.includes("plumbing")) iconEmoji = '🔧';
+              if (p.categories.includes("electrical")) iconEmoji = '⚡';
+              if (p.categories.includes("assembly")) iconEmoji = '📦';
+              if (p.categories.includes("painting")) iconEmoji = '🎨';
+              if (p.categories.includes("gardening")) iconEmoji = '🌱';
 
+              var iconHtml = '<div class="marker-badge">' + iconEmoji + '</div>';
               var icon = L.divIcon({ html: iconHtml, className: '', iconSize: [36, 36], iconAnchor: [18, 36] });
               var marker = L.marker([p.location.latitude, p.location.longitude], {icon: icon}).addTo(window.map);
+              
+              marker.on('click', function() {
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SELECT_PROVIDER', payload: p }));
+              });
             });
           </script>
         </body>
@@ -117,16 +142,15 @@ export default function ClientHome() {
 
   return (
     <View style={styles.container}>
-      {userLocation && (
-        <WebView
-          ref={webviewRef}
-          source={{ html: generateMapHtml() }}
-          style={StyleSheet.absoluteFillObject}
-          scrollEnabled={false}
-          bounces={false}
-          originWhitelist={['*']}
-        />
-      )}
+      <WebView
+        ref={webviewRef}
+        source={{ html: generateMapHtml() }}
+        style={StyleSheet.absoluteFillObject}
+        scrollEnabled={false}
+        onMessage={handleMessage}
+        bounces={false}
+        originWhitelist={['*']}
+      />
 
       <View style={[styles.floatingHeader, { top: Math.max(insets.top, 20) + spacing.sm }]}>
         <View style={styles.greetingPill}>
@@ -145,11 +169,40 @@ export default function ClientHome() {
       </View>
 
       <TouchableOpacity 
-        style={[styles.locationBtn, { bottom: 280 + Math.max(insets.bottom, 20) }]}
+        style={[styles.locationBtn, { bottom: (selectedProvider ? 400 : 280) + Math.max(insets.bottom, 20) }]}
         onPress={centerMap}
       >
         <Feather name="crosshair" size={20} color={colors.onSurface} />
       </TouchableOpacity>
+
+      {/* Card de Prestador Selecionado */}
+      {selectedProvider && (
+        <View style={[styles.selectedCard, { bottom: Math.max(insets.bottom, 20) + 120 }]}>
+          <TouchableOpacity 
+            style={styles.closeCardBtn} 
+            onPress={() => setSelectedProvider(null)}
+          >
+            <Feather name="x" size={20} color={colors.onSurfaceMuted} />
+          </TouchableOpacity>
+          
+          <View style={styles.providerRow}>
+            <View style={styles.providerAvatarSmall}>
+              <Text style={{ fontSize: 24 }}>👷</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.providerNameText}>{selectedProvider.name}</Text>
+              <Text style={styles.providerInfoText}>⭐ {selectedProvider.rating} • R$ {selectedProvider.basePrice}/base</Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.viewProfileBtn}
+            onPress={() => router.push(`/(client)/provider/${selectedProvider.uid}`)}
+          >
+            <Text style={styles.viewProfileBtnText}>Ver Perfil e Contratar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={[styles.bottomSheet, { paddingBottom: Math.max(insets.bottom, spacing.xl) }]}>
         <View style={styles.dragIndicator} />
@@ -190,6 +243,16 @@ const styles = StyleSheet.create({
   avatarPlaceholder: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primaryContainer, justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: colors.surfaceLowest },
   avatarInitial: { fontFamily: typography.bodyBold, fontSize: typography.sizes.titleSm, color: colors.onPrimary },
   locationBtn: { position: "absolute", right: spacing.xl, width: 48, height: 48, borderRadius: 24, backgroundColor: colors.surfaceLowest, justifyContent: "center", alignItems: "center", ...shadows.card, zIndex: 10 },
+  
+  selectedCard: { position: "absolute", left: spacing.xl, right: spacing.xl, backgroundColor: colors.surfaceLowest, borderRadius: radius.xl, padding: spacing.lg, ...shadows.float, zIndex: 11 },
+  closeCardBtn: { position: "absolute", top: 12, right: 12, width: 32, height: 32, justifyContent: "center", alignItems: "center" },
+  providerRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: spacing.lg },
+  providerAvatarSmall: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surfaceHigh, justifyContent: "center", alignItems: "center" },
+  providerNameText: { fontFamily: typography.headline, fontSize: 18, color: colors.onSurface },
+  providerInfoText: { fontFamily: typography.body, fontSize: 14, color: colors.onSurfaceVariant },
+  viewProfileBtn: { backgroundColor: colors.primaryContainer, borderRadius: radius.full, paddingVertical: 14, alignItems: "center" },
+  viewProfileBtnText: { fontFamily: typography.bodyBold, fontSize: 15, color: colors.onPrimary },
+
   bottomSheet: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: colors.surfaceLowest, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingHorizontal: spacing.xl, paddingTop: spacing.sm, ...shadows.float, elevation: 20 },
   dragIndicator: { width: 40, height: 4, backgroundColor: colors.surfaceHighest, borderRadius: 2, alignSelf: "center", marginBottom: spacing.lg },
   sheetTitle: { fontFamily: typography.headline, fontSize: 22, color: colors.onSurface, marginBottom: spacing.lg },

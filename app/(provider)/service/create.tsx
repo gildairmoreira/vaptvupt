@@ -5,7 +5,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert,
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { supabase } from "@/lib/supabase";
+import { createService } from "@/lib/database";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
 import { strings } from "@/constants/localization";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -38,9 +38,7 @@ export default function CreateService() {
     if (!user?.uid) return;
     setIsLoading(true);
     try {
-      const serviceId = `${user.uid}_${Date.now()}`;
-      await supabase.from("services").insert({
-        id: serviceId,
+      await createService({
         provider_id: user.uid,
         title: title.trim(),
         category,

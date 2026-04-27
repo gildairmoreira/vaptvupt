@@ -1,143 +1,142 @@
-// Splash Screen personalizada do VaptVupt
-// Exibida enquanto Firebase verifica a sessão do usuário
+import React, { useEffect } from "react";
+import { View, StyleSheet, Dimensions, Image } from "react-native";
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withSpring, 
+  withTiming, 
+  withDelay,
+  withRepeat,
+  withSequence,
+  Easing
+} from "react-native-reanimated";
+import { colors, typography } from "@/constants/theme";
 
-import React, { useEffect, useRef } from "react";
-import {
-  View,
-  Image,
-  StyleSheet,
-  Animated,
-  Dimensions,
-} from "react-native";
-
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 export default function SplashView() {
-  const scaleAnim = useRef(new Animated.Value(0.7)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const logoY = useSharedValue(-height / 2);
+  const logoScale = useSharedValue(0.5);
+  const textOpacity = useSharedValue(0);
+  const headlineOpacity = useSharedValue(0);
+  const pulseScale = useSharedValue(1);
 
   useEffect(() => {
-    // Entrada: fade + scale
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 6,
-        tension: 60,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      // Pulsação suave após entrada
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.04,
-            duration: 900,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 900,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    });
+    // Logo dropping from top
+    logoY.value = withSpring(0, { damping: 12, stiffness: 90 });
+    logoScale.value = withSpring(1, { damping: 12, stiffness: 90 });
+
+    // Text animations with delay
+    textOpacity.value = withDelay(800, withTiming(1, { duration: 800 }));
+    headlineOpacity.value = withDelay(1400, withTiming(1, { duration: 1000 }));
+
+    // Continuous pulse for the logo
+    pulseScale.value = withDelay(2000, withRepeat(
+      withSequence(
+        withTiming(1.05, { duration: 1000, easing: Easing.bezier(0.4, 0, 0.2, 1) }),
+        withTiming(1, { duration: 1000, easing: Easing.bezier(0.4, 0, 0.2, 1) })
+      ),
+      -1,
+      true
+    ));
   }, []);
+
+  const logoStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: logoY.value },
+      { scale: logoScale.value * pulseScale.value }
+    ],
+  }));
+
+  const textStyle = useAnimatedStyle(() => ({
+    opacity: textOpacity.value,
+    transform: [{ translateY: withTiming(textOpacity.value === 1 ? 0 : 20, { duration: 800 }) }]
+  }));
+
+  const headlineStyle = useAnimatedStyle(() => ({
+    opacity: headlineOpacity.value,
+  }));
 
   return (
     <View style={styles.container}>
-      {/* Logo animada */}
-      <Animated.View
-        style={[
-          styles.logoWrapper,
-          {
-            transform: [
-              { scale: Animated.multiply(scaleAnim, pulseAnim) },
-            ],
-            opacity: opacityAnim,
-          },
-        ]}
-      >
+      <Animated.View style={[styles.logoWrapper, logoStyle]}>
         <Image
-          source={require("../assets/images/logo.png")}
+          source={require("../assets/images/logo-icon.png")}
           style={styles.logo}
           resizeMode="contain"
         />
       </Animated.View>
 
-      {/* Indicador de carregamento */}
-      <Animated.View style={[styles.dotsRow, { opacity: opacityAnim }]}>
-        <LoadingDot delay={0} />
-        <LoadingDot delay={200} />
-        <LoadingDot delay={400} />
-      </Animated.View>
+      <View style={styles.textContainer}>
+        <Animated.Text style={[styles.brandText, textStyle]}>
+          vaptvupt
+        </Animated.Text>
+        <Animated.Text style={[styles.headline, headlineStyle]}>
+          Onde você acha quem você precisa na hora que você quer!
+        </Animated.Text>
+      </View>
+
+      <View style={styles.footer}>
+        <Animated.View style={[styles.loader, { opacity: textOpacity }]}>
+          <View style={styles.loaderBar} />
+        </Animated.View>
+      </View>
     </View>
-  );
-}
-
-// Dot pulsante para indicar carregamento
-function LoadingDot({ delay }: { delay: number }) {
-  const anim = useRef(new Animated.Value(0.3)).current;
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(anim, {
-            toValue: 1,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(anim, {
-            toValue: 0.3,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    }, delay);
-    return () => clearTimeout(timer);
-  }, [delay]);
-
-  return (
-    <Animated.View
-      style={[styles.dot, { opacity: anim }]}
-    />
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.baseSurface,
     justifyContent: "center",
     alignItems: "center",
-    gap: 48,
   },
   logoWrapper: {
-    alignItems: "center",
+    width: 160,
+    height: 160,
     justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 40,
   },
   logo: {
-    width: width * 0.55,
-    height: width * 0.55,
+    width: 140,
+    height: 140,
   },
-  dotsRow: {
-    flexDirection: "row",
-    gap: 10,
+  textContainer: {
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  brandText: {
+    fontFamily: typography.display,
+    fontSize: 48,
+    color: colors.primaryContainer,
+    marginBottom: 12,
+  },
+  headline: {
+    fontFamily: typography.bodyBold,
+    fontSize: 16,
+    color: colors.onSurfaceVariant,
+    textAlign: "center",
+    lineHeight: 24,
+  },
+  footer: {
     position: "absolute",
-    bottom: 80,
+    bottom: 60,
+    width: "100%",
+    alignItems: "center",
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#d83900",
+  loader: {
+    width: 200,
+    height: 4,
+    backgroundColor: colors.surfaceHigh,
+    borderRadius: 2,
+    overflow: "hidden",
   },
+  loaderBar: {
+    width: "40%",
+    height: "100%",
+    backgroundColor: colors.primaryContainer,
+    borderRadius: 2,
+  }
 });

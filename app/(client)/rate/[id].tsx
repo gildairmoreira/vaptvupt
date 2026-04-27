@@ -19,7 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
 import { strings } from "@/constants/localization";
 import { useAuthStore } from "@/store/useAuthStore";
-import { saveReview, getProvider, ProviderData } from "@/lib/firestore";
+import { saveReview, getProvider, ProviderData } from "@/lib/database";
 import { useEffect } from "react";
 
 export default function RateService() {

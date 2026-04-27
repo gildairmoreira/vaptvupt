@@ -166,28 +166,6 @@ export default function SignIn() {
                 <Text style={styles.backText}>← Voltar para o login</Text>
               </TouchableOpacity>
             )}
-
-            {/* Divider */}
-            {!resetMode && (
-              <>
-                <View style={styles.divider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>ou</Text>
-                  <View style={styles.dividerLine} />
-                </View>
-
-                {/* Botão Google */}
-                <TouchableOpacity
-                  style={[styles.googleBtn, !isReady && { opacity: 0.7 }]}
-                  activeOpacity={0.85}
-                  disabled={!isReady}
-                  onPress={() => promptAsync()}
-                >
-                  <Text style={styles.googleIcon}>G</Text>
-                  <Text style={styles.googleBtnText}>{strings.auth.googleBtn}</Text>
-                </TouchableOpacity>
-              </>
-            )}
           </View>
 
           {/* Link para cadastro */}
@@ -199,16 +177,6 @@ export default function SignIn() {
               </TouchableOpacity>
             </View>
           )}
-
-          {/* Dev Bypass Buttons */}
-          <View style={{ flexDirection: "row", justifyContent: "space-around", marginTop: 20 }}>
-            <TouchableOpacity onPress={() => { useAuthStore.getState().devBypass("client"); router.replace("/"); }} style={{ padding: 10, backgroundColor: "#e0e0e0", borderRadius: 8 }}>
-              <Text style={{ fontFamily: typography.bodyBold }}>Mock Cliente</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => { useAuthStore.getState().devBypass("provider"); router.replace("/"); }} style={{ padding: 10, backgroundColor: "#e0e0e0", borderRadius: 8 }}>
-              <Text style={{ fontFamily: typography.bodyBold }}>Mock Prestador</Text>
-            </TouchableOpacity>
-          </View>
 
           {/* Dev Bypass Buttons */}
           <View style={{ flexDirection: "row", justifyContent: "space-around", marginTop: 20 }}>

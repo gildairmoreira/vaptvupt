@@ -69,9 +69,11 @@ export default function ProviderLayout() {
           ),
         }}
       />
-      {/* Telas sem tab */}
+      {/* Telas auxiliares (escondidas da tab bar) */}
       <Tabs.Screen name="request/[id]" options={{ href: null }} />
       <Tabs.Screen name="service/create" options={{ href: null }} />
+      <Tabs.Screen name="my-services" options={{ href: null }} />
+      <Tabs.Screen name="edit-service/[id]" options={{ href: null }} />
     </Tabs>
   );
 }

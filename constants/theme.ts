@@ -5,7 +5,7 @@ export const colors = {
   // ========================
   // SUPERFÍCIES (sem bordas — hierarquia por cor)
   // ========================
-  baseSurface: "#f9f9f9",
+  baseSurface: "#eeeeee",
   surfaceLowest: "#ffffff",
   surfaceLow: "#fcfcfc",
   surface: "#f5f5f5",

@@ -4,32 +4,24 @@
     "slug": "vaptvupt",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo.png",
     "scheme": "vaptvupt",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/images/splash.png",
+      "image": "./assets/images/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#f9f9f9"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.vaptvupt.app",
-      "config": {
-        "googleMapsApiKey": "AIzaSyCsoWp7Nq-8heIQhtwfWzmn2szEgt9wEVk"
-      }
+      "bundleIdentifier": "com.vaptvupt.app"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.vaptvupt.app",
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyCsoWp7Nq-8heIQhtwfWzmn2szEgt9wEVk"
-        }
-      },
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",

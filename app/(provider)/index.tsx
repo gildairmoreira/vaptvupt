@@ -75,13 +75,21 @@ export default function ProviderDashboard() {
             <Text style={styles.greeting}>Olá, {firstName} 👋</Text>
             <Text style={styles.subGreeting}>Seu painel de controle</Text>
           </View>
-          <TouchableOpacity onPress={() => router.push("/(provider)/profile")}>
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarInitial}>
-                {user?.name?.charAt(0)?.toUpperCase() || "P"}
-              </Text>
-            </View>
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", gap: spacing.sm }}>
+            <TouchableOpacity 
+              onPress={() => router.push("/(provider)/my-services")}
+              style={styles.headerActionBtn}
+            >
+              <Text style={{ fontSize: 18 }}>🛠️</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push("/(provider)/profile")}>
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarInitial}>
+                  {user?.name?.charAt(0)?.toUpperCase() || "P"}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* ======================== */}
@@ -279,6 +287,14 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: colors.primaryContainer,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerActionBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surfaceHigh,
     justifyContent: "center",
     alignItems: "center",
   },
