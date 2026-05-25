@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
 import { strings } from "@/constants/localization";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -72,7 +73,7 @@ export default function ProviderDashboard() {
         {/* ======================== */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Olá, {firstName} 👋</Text>
+            <Text style={styles.greeting}>Olá, {firstName}</Text>
             <Text style={styles.subGreeting}>Seu painel de controle</Text>
           </View>
           <View style={{ flexDirection: "row", gap: spacing.sm }}>
@@ -80,7 +81,7 @@ export default function ProviderDashboard() {
               onPress={() => router.push("/(provider)/my-services")}
               style={styles.headerActionBtn}
             >
-              <Text style={{ fontSize: 18 }}>🛠️</Text>
+              <Feather name="tool" size={18} color={colors.onSurfaceVariant} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push("/(provider)/profile")}>
               <View style={styles.avatarPlaceholder}>
@@ -127,18 +128,18 @@ export default function ProviderDashboard() {
           <MetricCard
             label={strings.dashboard.todayEarnings}
             value={`R$ ${todayEarnings.toFixed(2).replace(".", ",")}`}
-            emoji="💰"
+            iconName="dollar-sign"
             highlight
           />
           <MetricCard
             label={strings.dashboard.completedServices}
             value={`${todayServices}`}
-            emoji="✅"
+            iconName="check-circle"
           />
           <MetricCard
             label={strings.dashboard.avgRating}
             value={avgRating > 0 ? avgRating.toFixed(1) : "–"}
-            emoji="⭐"
+            iconName="star"
           />
         </View>
 
@@ -156,15 +157,18 @@ export default function ProviderDashboard() {
 
         {!isAvailable && (
           <View style={styles.offlineNote}>
-            <Text style={styles.offlineNoteText}>
-              ⚡ Ative sua disponibilidade para receber solicitações
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Feather name="zap" size={14} color={colors.onSurfaceVariant} />
+              <Text style={styles.offlineNoteText}>
+                Ative sua disponibilidade para receber solicitações
+              </Text>
+            </View>
           </View>
         )}
 
         {pendingRequests.length === 0 && isAvailable && (
           <View style={styles.emptyBox}>
-            <Text style={styles.emptyEmoji}>🔔</Text>
+            <Feather name="bell" size={40} color={colors.onSurfaceMuted} />
             <Text style={styles.emptyText}>{strings.dashboard.noRequests}</Text>
           </View>
         )}
@@ -189,17 +193,17 @@ export default function ProviderDashboard() {
 function MetricCard({
   label,
   value,
-  emoji,
+  iconName,
   highlight = false,
 }: {
   label: string;
   value: string;
-  emoji: string;
+  iconName: React.ComponentProps<typeof Feather>['name'];
   highlight?: boolean;
 }) {
   return (
     <View style={[styles.metricCard, highlight && styles.metricCardHighlight]}>
-      <Text style={styles.metricEmoji}>{emoji}</Text>
+      <Feather name={iconName} size={22} color={highlight ? colors.primaryContainer : colors.onSurfaceVariant} />
       <Text style={[styles.metricValue, highlight && styles.metricValueHighlight]}>
         {value}
       </Text>
@@ -224,11 +228,17 @@ function RequestCard({
       <View style={styles.requestBadgesRow}>
         {request.isUrgent && (
           <View style={styles.urgentBadge}>
-            <Text style={styles.urgentBadgeText}>⚡ {strings.dashboard.urgentBadge}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+              <Feather name="zap" size={11} color={colors.warning} />
+              <Text style={styles.urgentBadgeText}>{strings.dashboard.urgentBadge}</Text>
+            </View>
           </View>
         )}
         <View style={styles.statusBadge}>
-          <Text style={styles.statusBadgeText}>🕐 Pendente</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+            <Feather name="clock" size={11} color={colors.onSurfaceVariant} />
+            <Text style={styles.statusBadgeText}>Pendente</Text>
+          </View>
         </View>
       </View>
 

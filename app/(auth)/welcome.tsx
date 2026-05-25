@@ -22,6 +22,7 @@ import Animated, {
   withTiming,
   Easing 
 } from "react-native-reanimated";
+import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
 import { strings } from "@/constants/localization";
 
@@ -171,14 +172,17 @@ function SlideExpress() {
       <View style={styles.imageCardContainer}>
         <View style={styles.imageCard}>
           <View style={styles.expressBadge}>
-            <Text style={styles.expressBadgeIcon}>⚡</Text>
+            <Feather name="zap" size={14} color={colors.onSurface} />
             <Text style={styles.expressBadgeText}>{strings.onboarding.slide2.badge}</Text>
           </View>
           <View style={styles.scooterBg}>
-            <Text style={{ fontSize: 80 }}>🛵</Text>
+            <Feather name="truck" size={64} color={colors.onSurfaceVariant} />
           </View>
           <View style={styles.etaBadge}>
-            <Text style={styles.etaBadgeText}>📍 {strings.onboarding.slide2.etaBadge}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Feather name="map-pin" size={12} color={colors.onSecondary} />
+              <Text style={styles.etaBadgeText}>{strings.onboarding.slide2.etaBadge}</Text>
+            </View>
           </View>
         </View>
         <View style={styles.imageCardShadow} />
@@ -210,24 +214,26 @@ function SlideTrust() {
       <View style={styles.trustContainer}>
         <View style={[styles.providerMiniCard, styles.cardLeft]}>
           <View style={styles.providerMiniAvatar}>
-            <Text style={{ fontSize: 20 }}>👨‍🔧</Text>
+            <Feather name="user" size={20} color={colors.onSurfaceVariant} />
           </View>
           <View>
             <Text style={styles.providerMiniName}>Ricardo S.</Text>
             <Text style={styles.providerMiniRating}>⭐ 4.9</Text>
           </View>
           <View style={styles.bgOkBadge}>
-            <Text style={styles.bgOkText}>✓ {strings.onboarding.slide3.badge1}</Text>
+            <Text style={styles.bgOkText}>
+              <Feather name="check" size={12} color={colors.onSurface} /> {strings.onboarding.slide3.badge1}
+            </Text>
           </View>
         </View>
 
         <View style={styles.verifiedCenter}>
-          <Text style={{ fontSize: 28, color: colors.onPrimary }}>✓</Text>
+          <Feather name="check" size={24} color={colors.onPrimary} />
         </View>
 
         <View style={[styles.providerMiniCard, styles.cardRight]}>
           <View style={styles.providerMiniAvatar}>
-            <Text style={{ fontSize: 20 }}>👩‍💼</Text>
+            <Feather name="user" size={20} color={colors.onSurfaceVariant} />
           </View>
           <View>
             <Text style={styles.providerMiniName}>Mariana L.</Text>
@@ -270,7 +276,7 @@ function SlideCTA() {
   return (
     <View style={[styles.slide, { backgroundColor: "#fff5f0" }]}>
       <Animated.View style={[styles.ctaIconContainer, rocketStyle]}>
-        <Text style={{ fontSize: 100 }}>🚀</Text>
+        <Feather name="arrow-up-right" size={80} color={colors.primaryContainer} />
       </Animated.View>
       <View style={styles.textBlock}>
         <Text style={styles.headlineNormal}>{strings.onboarding.slide4.title}</Text>

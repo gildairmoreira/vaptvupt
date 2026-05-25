@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "@/constants/theme";
 import { strings } from "@/constants/localization";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -72,7 +73,7 @@ export default function SignUp() {
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-              <Text style={styles.backIcon}>←</Text>
+              <Feather name="arrow-left" size={20} color={colors.onSurface} />
             </TouchableOpacity>
             <Image
               source={require("../../assets/images/logo-icon.png")}
@@ -132,7 +133,7 @@ export default function SignUp() {
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeBtn}
                 >
-                  <Text style={styles.eyeIcon}>{showPassword ? "🙈" : "👁️"}</Text>
+                  <Feather name={showPassword ? "eye-off" : "eye"} size={18} color={colors.onSurfaceVariant} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -150,7 +151,9 @@ export default function SignUp() {
                   onPress={() => setRole("client")}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.roleEmoji}>👤</Text>
+                  <View style={styles.roleIconWrap}>
+                    <Feather name="user" size={28} color={role === "client" ? colors.primaryContainer : colors.onSurfaceVariant} />
+                  </View>
                   <Text style={[styles.roleLabel, role === "client" && styles.roleLabelActive]}>
                     {strings.auth.roleClient}
                   </Text>
@@ -159,7 +162,7 @@ export default function SignUp() {
                   </Text>
                   {role === "client" && (
                     <View style={styles.roleCheck}>
-                      <Text style={styles.roleCheckText}>✓</Text>
+                      <Feather name="check" size={14} color={colors.onPrimary} />
                     </View>
                   )}
                 </TouchableOpacity>
@@ -173,7 +176,9 @@ export default function SignUp() {
                   onPress={() => setRole("provider")}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.roleEmoji}>🔧</Text>
+                  <View style={styles.roleIconWrap}>
+                    <Feather name="tool" size={28} color={role === "provider" ? colors.primaryContainer : colors.onSurfaceVariant} />
+                  </View>
                   <Text style={[styles.roleLabel, role === "provider" && styles.roleLabelActive]}>
                     {strings.auth.roleProvider}
                   </Text>
@@ -182,7 +187,7 @@ export default function SignUp() {
                   </Text>
                   {role === "provider" && (
                     <View style={styles.roleCheck}>
-                      <Text style={styles.roleCheckText}>✓</Text>
+                      <Feather name="check" size={14} color={colors.onPrimary} />
                     </View>
                   )}
                 </TouchableOpacity>
@@ -346,8 +351,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     elevation: 4,
   },
-  roleEmoji: {
-    fontSize: 32,
+  roleIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.surfaceHigh,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: spacing.sm,
   },
   roleLabel: {

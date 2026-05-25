@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
-import { getUser, UserData } from "@/lib/database";
+import { getUser, createUserProfile, UserData } from "@/lib/database";
 
 interface AuthState {
   user: UserData | null;
@@ -13,6 +13,7 @@ interface AuthState {
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   devBypass: (role: "client" | "provider") => void;
+  updateUserData: (data: Partial<UserData>) => void;
   clearError: () => void;
   initAuthListener: () => () => void;
 }
@@ -62,9 +63,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
       if (data.user) {
-        const u = { uid: data.user.id, name, email, role };
-        // salva user aqui futuramente
-        set({ user: u, isAuthenticated: true, isLoading: false });
+        const userData: UserData = { uid: data.user.id, name, email, role };
+        // Salva perfil do usuário no Supabase
+        await createUserProfile(userData);
+        set({ user: userData, isAuthenticated: true, isLoading: false });
       }
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
@@ -103,4 +105,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   clearError: () => set({ error: null }),
+
+  updateUserData: (data) => {
+    const currentUser = get().user;
+    if (currentUser) {
+      set({ user: { ...currentUser, ...data } });
+    }
+  },
 }));

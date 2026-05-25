@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius } from "@/constants/theme";
 import { strings } from "@/constants/localization";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -123,7 +124,7 @@ export default function SignIn() {
                     onPress={() => setShowPassword(!showPassword)}
                     style={styles.eyeBtn}
                   >
-                    <Text style={styles.eyeIcon}>{showPassword ? "🙈" : "👁️"}</Text>
+                    <Feather name={showPassword ? "eye-off" : "eye"} size={18} color={colors.onSurfaceVariant} />
                   </TouchableOpacity>
                 </View>
 
@@ -163,7 +164,10 @@ export default function SignIn() {
             {/* Voltar do modo reset */}
             {resetMode && (
               <TouchableOpacity onPress={() => setResetMode(false)} style={styles.backBtn}>
-                <Text style={styles.backText}>← Voltar para o login</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Feather name="arrow-left" size={14} color={colors.secondary} />
+                  <Text style={styles.backText}>Voltar para o login</Text>
+                </View>
               </TouchableOpacity>
             )}
           </View>

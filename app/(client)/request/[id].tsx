@@ -115,7 +115,6 @@ export default function RequestStatus() {
         <View style={styles.searchingContainer}>
           <View style={styles.pulseWrapper}>
             <Animated.View style={[styles.pulseCircle, animatedPulseStyle]} />
-            <Animated.View style={[styles.pulseCircle, animatedPulseStyle, { animationDelay: '1s' }]} />
             <View style={styles.iconCircle}>
               <Text style={{ fontSize: 50 }}>🛰️</Text>
             </View>

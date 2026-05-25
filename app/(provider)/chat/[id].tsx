@@ -1,6 +1,5 @@
-// Chat em Tempo Real — VaptVupt
-// Mensagens entre cliente e prestador vinculadas a uma solicitação
-// Powered by mock funcional com estado em memória
+// Chat em Tempo Real — VaptVupt (Provider)
+// Mesma interface do chat do cliente, reutilizada para o prestador
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
@@ -30,9 +29,8 @@ import {
   UserData,
 } from "@/lib/database";
 
-export default function ChatScreen() {
-  // id = requestId, pid = providerId
-  const { id: requestId, pid: providerId } = useLocalSearchParams<{
+export default function ProviderChatScreen() {
+  const { id: requestId, pid: clientId } = useLocalSearchParams<{
     id: string;
     pid: string;
   }>();
@@ -47,40 +45,36 @@ export default function ChatScreen() {
 
   const flatListRef = useRef<FlatList>(null);
 
-  // Inicializa o chat e carrega dados do outro participante
+  // Inicializa o chat — para o provider, o "outro" é o cliente
   useEffect(() => {
     const init = async () => {
-      if (!requestId || !providerId || !user?.uid) return;
+      if (!requestId || !user?.uid) return;
 
-      // Determina o client/provider IDs
-      const clientId = user.role === "client" ? user.uid : providerId;
-      const provId = user.role === "provider" ? user.uid : providerId;
+      const provId = user.uid;
+      const cId = clientId || 'mock-client-1';
 
       // Cria ou busca chat existente
-      const cid = await getOrCreateChat(requestId, clientId, provId);
+      const cid = await getOrCreateChat(requestId, cId, provId);
       setChatId(cid);
 
-      // Carrega dados do outro usuário para exibição
-      const otherId = user.role === "client" ? provId : clientId;
-      const other = await getUser(otherId);
+      // Carrega dados do cliente
+      const other = await getUser(cId);
       setOtherUser(other);
 
       setIsLoading(false);
     };
     init();
-  }, [requestId, providerId, user]);
+  }, [requestId, clientId, user]);
 
-  // Escuta mensagens em tempo real quando chatId está disponível
+  // Escuta mensagens em tempo real
   useEffect(() => {
     if (!chatId) return;
 
     const unsubscribe = subscribeMessages(chatId, (msgs) => {
       setMessages(msgs);
-      // Scroll para o final ao receber novas mensagens
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     });
 
-    // Marca mensagens como lidas ao entrar no chat
     if (user?.uid) {
       markMessagesRead(chatId, user.uid);
     }
@@ -103,14 +97,12 @@ export default function ChatScreen() {
         read: false,
       });
     } catch {
-      // Recoloca o texto em caso de erro
       setInputText(text);
     } finally {
       setIsSending(false);
     }
   }, [inputText, chatId, user]);
 
-  // Formata timestamp
   const formatTime = (createdAt: any): string => {
     if (!createdAt) return "";
     try {
@@ -137,22 +129,16 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      {/* ======================== */}
-      {/* HEADER DO CHAT */}
-      {/* ======================== */}
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={18} color={colors.onSurface} />
         </TouchableOpacity>
 
-        {/* Avatar + nome do outro participante */}
         <View style={styles.headerUserInfo}>
           <View style={styles.headerAvatar}>
             {otherUser?.photoUrl ? (
-              <Image
-                source={{ uri: otherUser.photoUrl }}
-                style={styles.headerAvatarImg}
-              />
+              <Image source={{ uri: otherUser.photoUrl }} style={styles.headerAvatarImg} />
             ) : (
               <Text style={styles.headerAvatarInitial}>
                 {otherUser?.name?.charAt(0)?.toUpperCase() || "?"}
@@ -164,28 +150,19 @@ export default function ChatScreen() {
               {otherUser?.name || "Carregando..."}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Feather 
-                name={otherUser?.role === "provider" ? "tool" : "user"} 
-                size={10} 
-                color={colors.onSurfaceMuted} 
-              />
-              <Text style={styles.headerRole}>
-                {otherUser?.role === "provider" ? "Prestador" : "Cliente"}
-              </Text>
+              <Feather name="user" size={10} color={colors.onSurfaceMuted} />
+              <Text style={styles.headerRole}>Cliente</Text>
             </View>
           </View>
         </View>
 
-        {/* Indicador de tempo real */}
         <View style={styles.liveIndicator}>
           <View style={styles.liveDot} />
           <Text style={styles.liveText}>ao vivo</Text>
         </View>
       </View>
 
-      {/* ======================== */}
       {/* LISTA DE MENSAGENS */}
-      {/* ======================== */}
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -218,7 +195,6 @@ export default function ChatScreen() {
                 isOwn ? styles.messageRowOwn : styles.messageRowOther,
               ]}
             >
-              {/* Avatar do outro usuário (agrupado) */}
               {!isOwn && (
                 <View style={styles.msgAvatar}>
                   {showAvatar ? (
@@ -229,29 +205,23 @@ export default function ChatScreen() {
                 </View>
               )}
 
-              {/* Bubble da mensagem */}
               <View style={styles.messageBubbleWrapper}>
                 <View
                   style={[
                     styles.messageBubble,
-                    isOwn
-                      ? styles.messageBubbleOwn
-                      : styles.messageBubbleOther,
+                    isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther,
                   ]}
                 >
                   <Text
                     style={[
                       styles.messageText,
-                      isOwn
-                        ? styles.messageTextOwn
-                        : styles.messageTextOther,
+                      isOwn ? styles.messageTextOwn : styles.messageTextOther,
                     ]}
                   >
                     {item.text}
                   </Text>
                 </View>
 
-                {/* Timestamp + status de leitura */}
                 {showTime && (
                   <View
                     style={[
@@ -277,12 +247,8 @@ export default function ChatScreen() {
         }}
       />
 
-      {/* ======================== */}
-      {/* INPUT DE MENSAGEM */}
-      {/* ======================== */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
+      {/* INPUT */}
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <View style={styles.inputBar}>
           <TextInput
             value={inputText}
@@ -318,218 +284,64 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.baseSurface,
-  },
-
-  // ========================
-  // HEADER
-  // ========================
+  container: { flex: 1, backgroundColor: colors.baseSurface },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surfaceLowest,
-    gap: spacing.sm,
-    ...shadows.card,
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: spacing.base, paddingVertical: spacing.sm,
+    backgroundColor: colors.surfaceLowest, gap: spacing.sm, ...shadows.card,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.surfaceHigh,
-    justifyContent: "center",
-    alignItems: "center",
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.surfaceHigh, justifyContent: "center", alignItems: "center",
   },
-  headerUserInfo: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
+  headerUserInfo: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm },
   headerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primaryContainer,
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: colors.primaryContainer, justifyContent: "center",
+    alignItems: "center", overflow: "hidden",
   },
-  headerAvatarImg: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  headerAvatarInitial: {
-    fontFamily: typography.bodyBold,
-    fontSize: typography.sizes.bodyMd,
-    color: colors.onPrimary,
-  },
-  headerName: {
-    fontFamily: typography.headline,
-    fontSize: typography.sizes.bodyMd,
-    color: colors.onSurface,
-  },
-  headerRole: {
-    fontFamily: typography.body,
-    fontSize: typography.sizes.caption,
-    color: colors.onSurfaceMuted,
-  },
-  liveIndicator: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#4caf50",
-  },
-  liveText: {
-    fontFamily: typography.body,
-    fontSize: typography.sizes.caption,
-    color: colors.onSurfaceMuted,
-  },
-
-  // ========================
-  // MENSAGENS
-  // ========================
-  messagesList: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-    gap: 4,
-  },
-  emptyChat: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 80,
-    gap: spacing.md,
-  },
-  emptyChatText: {
-    fontFamily: typography.body,
-    fontSize: typography.sizes.bodyMd,
-    color: colors.onSurfaceMuted,
-    textAlign: "center",
-    lineHeight: 22,
-  },
-
-  messageRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    marginVertical: 2,
-  },
-  messageRowOwn: {
-    justifyContent: "flex-end",
-  },
-  messageRowOther: {
-    justifyContent: "flex-start",
-  },
-
-  msgAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.surfaceHigh,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.xs,
-  },
-  msgAvatarText: {
-    fontFamily: typography.bodyBold,
-    fontSize: typography.sizes.caption,
-    color: colors.onSurfaceVariant,
-  },
-
-  messageBubbleWrapper: {
-    maxWidth: "75%",
-    gap: 2,
-  },
-  messageBubble: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.lg,
-  },
-  messageBubbleOwn: {
-    backgroundColor: colors.primaryContainer,
-    borderBottomRightRadius: 4,
-  },
-  messageBubbleOther: {
-    backgroundColor: colors.surfaceLowest,
-    borderBottomLeftRadius: 4,
-    ...shadows.card,
-  },
-  messageText: {
-    fontFamily: typography.body,
-    fontSize: typography.sizes.bodyMd,
-    lineHeight: 20,
-  },
-  messageTextOwn: {
-    color: colors.onPrimary,
-  },
-  messageTextOther: {
-    color: colors.onSurface,
-  },
-
-  messageMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  messageMetaOwn: {
-    justifyContent: "flex-end",
-  },
-  messageMetaOther: {
-    justifyContent: "flex-start",
-  },
-  messageTime: {
-    fontFamily: typography.body,
-    fontSize: typography.sizes.caption,
-    color: colors.onSurfaceMuted,
-  },
-
-  // ========================
-  // INPUT BAR
-  // ========================
+  headerAvatarImg: { width: 40, height: 40, borderRadius: 20 },
+  headerAvatarInitial: { fontFamily: typography.bodyBold, fontSize: typography.sizes.bodyMd, color: colors.onPrimary },
+  headerName: { fontFamily: typography.headline, fontSize: typography.sizes.bodyMd, color: colors.onSurface },
+  headerRole: { fontFamily: typography.body, fontSize: typography.sizes.caption, color: colors.onSurfaceMuted },
+  liveIndicator: { flexDirection: "row", alignItems: "center", gap: 4 },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#4caf50" },
+  liveText: { fontFamily: typography.body, fontSize: typography.sizes.caption, color: colors.onSurfaceMuted },
+  messagesList: { flexGrow: 1, paddingHorizontal: spacing.base, paddingVertical: spacing.md, gap: 4 },
+  emptyChat: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 80, gap: spacing.md },
+  emptyChatText: { fontFamily: typography.body, fontSize: typography.sizes.bodyMd, color: colors.onSurfaceMuted, textAlign: "center", lineHeight: 22 },
+  messageRow: { flexDirection: "row", alignItems: "flex-end", marginVertical: 2 },
+  messageRowOwn: { justifyContent: "flex-end" },
+  messageRowOther: { justifyContent: "flex-start" },
+  msgAvatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surfaceHigh, justifyContent: "center", alignItems: "center", marginRight: spacing.xs },
+  msgAvatarText: { fontFamily: typography.bodyBold, fontSize: typography.sizes.caption, color: colors.onSurfaceVariant },
+  messageBubbleWrapper: { maxWidth: "75%", gap: 2 },
+  messageBubble: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.lg },
+  messageBubbleOwn: { backgroundColor: colors.primaryContainer, borderBottomRightRadius: 4 },
+  messageBubbleOther: { backgroundColor: colors.surfaceLowest, borderBottomLeftRadius: 4, ...shadows.card },
+  messageText: { fontFamily: typography.body, fontSize: typography.sizes.bodyMd, lineHeight: 20 },
+  messageTextOwn: { color: colors.onPrimary },
+  messageTextOther: { color: colors.onSurface },
+  messageMetaRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  messageMetaOwn: { justifyContent: "flex-end" },
+  messageMetaOther: { justifyContent: "flex-start" },
+  messageTime: { fontFamily: typography.body, fontSize: typography.sizes.caption, color: colors.onSurfaceMuted },
   inputBar: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
+    flexDirection: "row", alignItems: "flex-end",
+    paddingHorizontal: spacing.base, paddingVertical: spacing.sm,
     paddingBottom: Platform.OS === "ios" ? spacing.md : spacing.sm,
-    backgroundColor: colors.surfaceLowest,
-    gap: spacing.sm,
-    borderTopWidth: 0,
-    ...shadows.card,
+    backgroundColor: colors.surfaceLowest, gap: spacing.sm, borderTopWidth: 0, ...shadows.card,
   },
   textInput: {
-    flex: 1,
-    backgroundColor: colors.surfaceHigh,
-    borderRadius: radius.xl,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
-    paddingTop: spacing.sm,
-    fontFamily: typography.body,
-    fontSize: typography.sizes.bodyMd,
-    color: colors.onSurface,
-    maxHeight: 120,
-    minHeight: 44,
+    flex: 1, backgroundColor: colors.surfaceHigh, borderRadius: radius.xl,
+    paddingHorizontal: spacing.base, paddingVertical: spacing.sm, paddingTop: spacing.sm,
+    fontFamily: typography.body, fontSize: typography.sizes.bodyMd, color: colors.onSurface,
+    maxHeight: 120, minHeight: 44,
   },
   sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primaryContainer,
-    justifyContent: "center",
-    alignItems: "center",
-    ...shadows.float,
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: colors.primaryContainer, justifyContent: "center",
+    alignItems: "center", ...shadows.float,
   },
-  sendBtnDisabled: {
-    opacity: 0.4,
-  },
+  sendBtnDisabled: { opacity: 0.4 },
 });

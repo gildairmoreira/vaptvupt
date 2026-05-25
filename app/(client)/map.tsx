@@ -1,3 +1,6 @@
+// Mapa de busca com Google Maps — VaptVupt
+// Busca de prestadores por texto com resultados no mapa
+
 import React, { useEffect, useState, useRef } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Image, ActivityIndicator } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -8,6 +11,8 @@ import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
 import { strings } from "@/constants/localization";
 import { searchProviders, ProviderData } from "@/lib/database";
+
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
 export default function SearchMap() {
   const { q } = useLocalSearchParams<{ q: string }>();
@@ -37,7 +42,8 @@ export default function SearchMap() {
       if (results.length > 0 && webviewRef.current && results[0].location) {
         webviewRef.current.injectJavaScript(`
           if (window.map) {
-            window.map.setView([${results[0].location.latitude}, ${results[0].location.longitude}], 14);
+            window.map.panTo({ lat: ${results[0].location.latitude}, lng: ${results[0].location.longitude} });
+            window.map.setZoom(14);
           }
           true;
         `);
@@ -62,50 +68,109 @@ export default function SearchMap() {
       <html>
         <head>
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-          <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-          <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
           <style>
             body { margin: 0; padding: 0; }
             #map { width: 100vw; height: 100vh; }
-            .leaflet-control-attribution { display: none; }
+            
             .marker-badge {
-              width: 36px; height: 36px; border-radius: 18px;
+              width: 32px; height: 32px; border-radius: 16px;
               background-color: ${colors.surfaceLowest};
               display: flex; justify-content: center; align-items: center;
-              box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+              box-shadow: 0 2px 8px rgba(0,0,0,0.15);
               border: 2px solid ${colors.primaryContainer};
-              color: ${colors.primaryContainer};
               cursor: pointer;
             }
+            .marker-badge svg { width: 16px; height: 16px; stroke: ${colors.onSurfaceVariant}; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
           </style>
         </head>
         <body>
           <div id="map"></div>
           <script>
-            window.map = L.map('map', { zoomControl: false }).setView([${userLocation.latitude}, ${userLocation.longitude}], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(window.map);
-            
-            var userIcon = L.divIcon({
-              html: '<div style="width:16px;height:16px;background-color:#2196F3;border-radius:50%;border:3px solid white;box-shadow:0 0 5px rgba(0,0,0,0.5);"></div>',
-              className: '', iconSize: [22, 22], iconAnchor: [11, 11]
-            });
-            L.marker([${userLocation.latitude}, ${userLocation.longitude}], {icon: userIcon}).addTo(window.map);
+            window.alert = function() {};
 
-            var providers = ${providersJson};
-            providers.forEach(function(p) {
-              var iconEmoji = '👤';
-              if (p.categories.includes("cleaning")) iconEmoji = '🧹';
-              if (p.categories.includes("plumbing")) iconEmoji = '🔧';
-              if (p.categories.includes("electrical")) iconEmoji = '⚡';
-              if (p.categories.includes("assembly")) iconEmoji = '📦';
-              if (p.categories.includes("painting")) iconEmoji = '🎨';
-              if (p.categories.includes("gardening")) iconEmoji = '🌱';
+            function initMap() {
+              window.map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: ${userLocation.latitude}, lng: ${userLocation.longitude} },
+                zoom: 13,
+                disableDefaultUI: true,
+                zoomControl: false,
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: false,
+                styles: [
+                  { featureType: "poi", elementType: "all", stylers: [{ visibility: "off" }] },
+                  { featureType: "transit", elementType: "all", stylers: [{ visibility: "off" }] },
+                  { featureType: "administrative", elementType: "labels", stylers: [{ visibility: "off" }] },
+                  { featureType: "water", elementType: "labels", stylers: [{ visibility: "off" }] }
+                ]
+              });
 
-              var iconHtml = '<div class="marker-badge" onclick="window.ReactNativeWebView.postMessage(JSON.stringify({type: \\'MARKER_CLICK\\', uid: \\'' + p.uid + '\\'}))">' + iconEmoji + '</div>';
-              var icon = L.divIcon({ html: iconHtml, className: '', iconSize: [36, 36], iconAnchor: [18, 36] });
-              L.marker([p.location.latitude, p.location.longitude], {icon: icon}).addTo(window.map);
-            });
+              // Marcador do usuário
+              new google.maps.Marker({
+                position: { lat: ${userLocation.latitude}, lng: ${userLocation.longitude} },
+                map: window.map,
+                icon: {
+                  path: google.maps.SymbolPath.CIRCLE,
+                  fillColor: '#2196F3',
+                  fillOpacity: 1,
+                  strokeColor: '#ffffff',
+                  strokeWeight: 3,
+                  scale: 8
+                },
+                zIndex: 999
+              });
+
+              // Marcadores dos prestadores
+              var providers = ${providersJson};
+              var categoryIcons = {
+                cleaning: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', 
+                plumbing: '<svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>', 
+                electrical: '<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+                assembly: '<svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>', 
+                painting: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', 
+                gardening: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', 
+                aircon: '<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
+              };
+              var defaultIcon = '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+
+              providers.forEach(function(p) {
+                var iconSvg = defaultIcon;
+                for (var i = 0; i < p.categories.length; i++) {
+                  if (categoryIcons[p.categories[i]]) {
+                    iconSvg = categoryIcons[p.categories[i]];
+                    break;
+                  }
+                }
+
+                var overlay = new google.maps.OverlayView();
+                overlay.onAdd = function() {
+                  var div = document.createElement('div');
+                  div.className = 'marker-badge';
+                  div.innerHTML = iconSvg;
+                  div.onclick = function() {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MARKER_CLICK', uid: p.uid }));
+                  };
+                  this.div = div;
+                  this.getPanes().overlayMouseTarget.appendChild(div);
+                };
+                overlay.draw = function() {
+                  var point = this.getProjection().fromLatLngToDivPixel(
+                    new google.maps.LatLng(p.location.latitude, p.location.longitude)
+                  );
+                  if (point) {
+                    this.div.style.position = 'absolute';
+                    this.div.style.left = (point.x - 16) + 'px';
+                    this.div.style.top = (point.y - 32) + 'px';
+                  }
+                };
+                overlay.onRemove = function() {
+                  if (this.div) this.div.parentNode.removeChild(this.div);
+                };
+                overlay.setMap(window.map);
+              });
+            }
           </script>
+          <script src="https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initMap" async defer></script>
         </body>
       </html>
     `;
@@ -183,7 +248,10 @@ export default function SearchMap() {
                   <Text style={styles.providerName}>{item.name}</Text>
                   <Text style={styles.providerCategory}>{item.categories.join(", ")}</Text>
                   <View style={styles.providerMeta}>
-                    <Text style={styles.providerRating}>⭐ {item.rating}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                      <Feather name="star" size={11} color={colors.onSurface} />
+                      <Text style={styles.providerRating}>{item.rating}</Text>
+                    </View>
                     <Text style={styles.providerPrice}>R$ {item.basePrice}</Text>
                   </View>
                 </View>
@@ -208,7 +276,7 @@ const styles = StyleSheet.create({
   dragIndicator: { width: 40, height: 4, backgroundColor: colors.surfaceHighest, borderRadius: 2, alignSelf: "center", marginBottom: spacing.md },
   list: { flexGrow: 0 },
   emptyText: { fontFamily: typography.body, fontSize: typography.sizes.bodyMd, color: colors.onSurfaceMuted, textAlign: "center", marginVertical: spacing.xl },
-  providerCard: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surfaceLowest, padding: spacing.md, borderRadius: radius.lg, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.surfaceHigh },
+  providerCard: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surfaceLowest, padding: spacing.md, borderRadius: radius.lg, marginBottom: spacing.sm },
   providerAvatar: { width: 50, height: 50, borderRadius: 25, marginRight: spacing.md },
   providerAvatarPlaceholder: { width: 50, height: 50, borderRadius: 25, backgroundColor: colors.primaryContainer, justifyContent: "center", alignItems: "center", marginRight: spacing.md },
   providerAvatarInitial: { fontFamily: typography.bodyBold, fontSize: typography.sizes.titleSm, color: colors.onPrimary },

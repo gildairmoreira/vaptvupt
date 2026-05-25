@@ -11,6 +11,7 @@ import { useProviderStore } from "@/store/useProviderStore";
 import { subscribeRequest, ServiceRequest } from "@/lib/database";
 
 const { width } = Dimensions.get("window");
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
 export default function ProviderRequestDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -55,12 +56,10 @@ export default function ProviderRequestDetail() {
       <html>
         <head>
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-          <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-          <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
           <style>
             body { margin: 0; padding: 0; }
             #map { width: 100vw; height: 100vh; }
-            .leaflet-control-attribution { display: none; }
+            
             .marker-client { width: 24px; height: 24px; background-color: ${colors.primaryContainer}; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
             .marker-provider { width: 20px; height: 20px; background-color: #2196F3; border-radius: 50%; border: 3px solid white; }
           </style>
@@ -68,22 +67,72 @@ export default function ProviderRequestDetail() {
         <body>
           <div id="map"></div>
           <script>
-            var map = L.map('map', { zoomControl: false });
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            
-            var clientPos = [${request.location.latitude}, ${request.location.longitude}];
-            var providerPos = [${providerLocation.latitude}, ${providerLocation.longitude}];
-            
-            L.marker(clientPos, { icon: L.divIcon({ className: '', html: '<div class="marker-client"></div>', iconSize: [30, 30] }) }).addTo(map);
-            
-            if (${isAccepted}) {
-              L.marker(providerPos, { icon: L.divIcon({ className: '', html: '<div class="marker-provider"></div>', iconSize: [26, 26] }) }).addTo(map);
-              var polyline = L.polyline([providerPos, clientPos], { color: '${colors.primaryContainer}', weight: 4, opacity: 0.7, dashArray: '10, 10' }).addTo(map);
-              map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
-            } else {
-              map.setView(clientPos, 15);
+            window.alert = function() {};
+
+            function initMap() {
+              var clientPos = { lat: ${request.location.latitude}, lng: ${request.location.longitude} };
+              var providerPos = { lat: ${providerLocation.latitude}, lng: ${providerLocation.longitude} };
+              
+              var map = new google.maps.Map(document.getElementById('map'), {
+                center: clientPos,
+                zoom: 15,
+                disableDefaultUI: true,
+                styles: [
+                  { featureType: "poi", elementType: "all", stylers: [{ visibility: "off" }] },
+                  { featureType: "transit", elementType: "all", stylers: [{ visibility: "off" }] },
+                  { featureType: "administrative", elementType: "labels", stylers: [{ visibility: "off" }] },
+                  { featureType: "water", elementType: "labels", stylers: [{ visibility: "off" }] }
+                ]
+              });
+              
+              var CustomMarker = function(latlng, map, className) {
+                this.latlng_ = latlng;
+                this.className_ = className;
+                this.setMap(map);
+              };
+              CustomMarker.prototype = new google.maps.OverlayView();
+              CustomMarker.prototype.draw = function() {
+                var div = this.div_;
+                if (!div) {
+                  div = this.div_ = document.createElement('div');
+                  div.className = this.className_;
+                  div.style.position = 'absolute';
+                  var panes = this.getPanes();
+                  panes.overlayImage.appendChild(div);
+                }
+                var point = this.getProjection().fromLatLngToDivPixel(this.latlng_);
+                if (point) {
+                  div.style.left = (point.x - (this.className_ === 'marker-client' ? 15 : 13)) + 'px';
+                  div.style.top = (point.y - (this.className_ === 'marker-client' ? 15 : 13)) + 'px';
+                }
+              };
+
+              new CustomMarker(new google.maps.LatLng(clientPos.lat, clientPos.lng), map, 'marker-client');
+
+              if (${isAccepted}) {
+                new CustomMarker(new google.maps.LatLng(providerPos.lat, providerPos.lng), map, 'marker-provider');
+                
+                var flightPath = new google.maps.Polyline({
+                  path: [providerPos, clientPos],
+                  geodesic: true,
+                  strokeColor: '${colors.primaryContainer}',
+                  strokeOpacity: 0,
+                  icons: [{
+                    icon: { path: 'M 0,-1 0,1', strokeOpacity: 0.7, scale: 4, strokeColor: '${colors.primaryContainer}', strokeWeight: 4 },
+                    offset: '0',
+                    repeat: '20px'
+                  }],
+                });
+                flightPath.setMap(map);
+                
+                var bounds = new google.maps.LatLngBounds();
+                bounds.extend(providerPos);
+                bounds.extend(clientPos);
+                map.fitBounds(bounds, { padding: 50 });
+              }
             }
           </script>
+          <script src="https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initMap" async defer></script>
         </body>
       </html>
     `;

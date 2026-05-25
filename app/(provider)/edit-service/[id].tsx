@@ -23,7 +23,9 @@ export default function EditService() {
   const loadData = async () => {
     try {
       const data = await getProviderData(user!.uid);
-      setPrice(data.basePrice.toString());
+      if (data) {
+        setPrice(data.basePrice.toString());
+      }
     } finally {
       setIsLoading(false);
     }
