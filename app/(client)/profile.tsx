@@ -21,6 +21,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { updateUser } from "@/lib/database";
 import { updateProfilePhoto } from "@/lib/storage";
 import { seedMockProviders } from "@/lib/seed";
+import { useSettingsStore } from "@/store/useSettingsStore";
 
 import { Feather } from "@expo/vector-icons";
 
@@ -54,6 +55,7 @@ function MenuItem({
 
 export default function Profile() {
   const { user, logout, updateUserData } = useAuthStore();
+  const { mapProvider, toggleMapProvider } = useSettingsStore();
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   const handleLogout = () => {
@@ -176,6 +178,15 @@ export default function Profile() {
             label={strings.profile.payments}
             onPress={() => {}}
             badge="Em breve"
+          />
+        </View>
+
+        {/* Configurações */}
+        <View style={styles.menuSection}>
+          <MenuItem
+            iconName="map"
+            label={`Mapa Padrão: ${mapProvider === "osm" ? "OpenStreetMap" : "Google Maps"}`}
+            onPress={toggleMapProvider}
           />
         </View>
 

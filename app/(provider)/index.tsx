@@ -27,7 +27,7 @@ export default function ProviderDashboard() {
   const {
     isAvailable,
     pendingRequests,
-    todayEarnings,
+    balance,
     todayServices,
     avgRating,
     isLoading,
@@ -126,8 +126,8 @@ export default function ProviderDashboard() {
         <Text style={styles.sectionTitle}>Hoje</Text>
         <View style={styles.metricsRow}>
           <MetricCard
-            label={strings.dashboard.todayEarnings}
-            value={`R$ ${todayEarnings.toFixed(2).replace(".", ",")}`}
+            label="Saldo (Carteira)"
+            value={`R$ ${balance.toFixed(2).replace(".", ",")}`}
             iconName="dollar-sign"
             highlight
           />

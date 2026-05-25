@@ -1,8 +1,4 @@
-// Tela de Avaliação do Serviço — VaptVupt
-// Conforme protótipo: foto do prestador, 5 estrelas interativas, textarea, "Enviar Avaliação"
-// + tela de sucesso "Obrigado!" conforme segundo protótipo
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -19,27 +15,52 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
 import { strings } from "@/constants/localization";
 import { useAuthStore } from "@/store/useAuthStore";
-import { saveReview, getProvider, ProviderData } from "@/lib/database";
-import { useEffect } from "react";
+import { useProviderStore } from "@/store/useProviderStore";
+import { saveReview, getProvider, ProviderData, getRequest, ServiceRequest } from "@/lib/database";
+import { Feather } from "@expo/vector-icons";
 
 export default function RateService() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuthStore();
+  const { addBalance } = useProviderStore();
 
+  const [step, setStep] = useState<"payment" | "rating">("payment");
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [provider, setProvider] = useState<ProviderData | null>(null);
+  const [requestData, setRequestData] = useState<ServiceRequest | null>(null);
 
-  // Carrega dados do prestador para exibição
+  // Carrega dados do prestador e da solicitação para exibição
   useEffect(() => {
     const load = async () => {
-      // Na prática, o providerId vem da solicitação — aqui como mock/placeholder
-      // Substituir pelo providerId real quando vier do request
+      if (!id) return;
+      const req = await getRequest(id as string);
+      if (req) {
+        setRequestData(req);
+        if (req.providerId) {
+          const prov = await getProvider(req.providerId);
+          setProvider(prov);
+        }
+      }
     };
     load();
   }, [id]);
+
+  const handlePayment = () => {
+    setIsLoading(true);
+    // Simula delay de pagamento
+    setTimeout(() => {
+      // Repassa 95% para o saldo do prestador no store!
+      const price = requestData?.estimatedPrice || 100;
+      const providerCut = price * 0.95;
+      addBalance(providerCut);
+      
+      setIsLoading(false);
+      setStep("rating");
+    }, 1200);
+  };
 
   const handleSubmit = async () => {
     if (rating === 0) return;
@@ -56,7 +77,6 @@ export default function RateService() {
       });
       setSuccess(true);
     } catch {
-      // Silencia erro e mostra sucesso mesmo assim (UX friendly)
       setSuccess(true);
     } finally {
       setIsLoading(false);
@@ -70,18 +90,14 @@ export default function RateService() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.successContainer}>
-          {/* Círculo com checkmark */}
           <View style={styles.successOuterCircle}>
             <View style={styles.successInnerCircle}>
               <Text style={styles.successCheck}>✓</Text>
             </View>
           </View>
-
-          {/* Título e subtítulo */}
           <Text style={styles.successTitle}>{strings.rate.successTitle}</Text>
           <Text style={styles.successSubtitle}>{strings.rate.successSubtitle}</Text>
 
-          {/* Card do prestador revisado */}
           <View style={styles.reviewedCard}>
             <View style={styles.reviewedAvatar}>
               {provider?.photoUrl ? (
@@ -99,7 +115,6 @@ export default function RateService() {
             </View>
           </View>
 
-          {/* Botão voltar para início */}
           <TouchableOpacity
             style={styles.primaryBtn}
             onPress={() => router.replace("/(client)")}
@@ -113,24 +128,71 @@ export default function RateService() {
   }
 
   // ========================
+  // TELA DE PAGAMENTO
+  // ========================
+  if (step === "payment") {
+    const price = requestData?.estimatedPrice || 100;
+    
+    return (
+      <SafeAreaView style={styles.container}>
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Pagamento do Serviço</Text>
+          </View>
+
+          <View style={styles.paymentCard}>
+            <Text style={styles.paymentLabel}>Valor Total</Text>
+            <Text style={styles.paymentAmount}>R$ {price.toFixed(2)}</Text>
+            <View style={styles.divider} />
+            <View style={styles.paymentRow}>
+              <Feather name="check-circle" size={16} color={colors.primaryContainer} />
+              <Text style={styles.paymentDesc}>Serviço prestado por {provider?.name || "Profissional"}</Text>
+            </View>
+            <View style={styles.paymentRow}>
+              <Feather name="shield" size={16} color={colors.primaryContainer} />
+              <Text style={styles.paymentDesc}>Pagamento 100% seguro pela plataforma</Text>
+            </View>
+          </View>
+
+          <View style={styles.paymentMethods}>
+            <Text style={styles.paymentLabel}>Método de Pagamento</Text>
+            <View style={styles.methodOptionActive}>
+              <Feather name="credit-card" size={24} color={colors.onSurface} />
+              <Text style={styles.methodOptionText}>Cartão de Crédito (Mock)</Text>
+              <Feather name="check-circle" size={20} color={colors.primaryContainer} style={{ marginLeft: "auto" }} />
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={handlePayment}
+            disabled={isLoading}
+            activeOpacity={0.85}
+          >
+            {isLoading ? (
+              <ActivityIndicator color={colors.onPrimary} />
+            ) : (
+              <Text style={styles.primaryBtnText}>Confirmar Pagamento</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // ========================
   // TELA DE AVALIAÇÃO
   // ========================
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Header com back */}
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backIcon}>←</Text>
+          <TouchableOpacity onPress={() => router.replace("/(client)")} style={styles.backBtn}>
+            <Text style={styles.backIcon}>✕</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{strings.rate.title}</Text>
         </View>
 
-        {/* Foto e info do prestador */}
         <View style={styles.providerSection}>
           <View style={styles.avatarWrapper}>
             {provider?.photoUrl ? (
@@ -140,7 +202,6 @@ export default function RateService() {
                 <Text style={{ fontSize: 48 }}>👤</Text>
               </View>
             )}
-            {/* Badge verificado */}
             <View style={styles.verifiedBadge}>
               <Text style={styles.verifiedBadgeText}>✓</Text>
             </View>
@@ -151,27 +212,18 @@ export default function RateService() {
           </Text>
         </View>
 
-        {/* Card de estrelas */}
         <View style={styles.starsCard}>
           <Text style={styles.starsQuestion}>{strings.rate.question}</Text>
           <View style={styles.starsRow}>
             {[1, 2, 3, 4, 5].map((star) => (
-              <TouchableOpacity
-                key={star}
-                onPress={() => setRating(star)}
-                activeOpacity={0.7}
-                style={styles.starBtn}
-              >
-                <Text style={[styles.starIcon, star <= rating && styles.starActive]}>
-                  ★
-                </Text>
+              <TouchableOpacity key={star} onPress={() => setRating(star)} activeOpacity={0.7} style={styles.starBtn}>
+                <Text style={[styles.starIcon, star <= rating && styles.starActive]}>★</Text>
               </TouchableOpacity>
             ))}
           </View>
           <Text style={styles.tapHint}>{strings.rate.tap}</Text>
         </View>
 
-        {/* Feedback opcional */}
         <Text style={styles.feedbackLabel}>{strings.rate.feedback}</Text>
         <TextInput
           value={comment}
@@ -184,12 +236,8 @@ export default function RateService() {
           textAlignVertical="top"
         />
 
-        {/* Botão enviar */}
         <TouchableOpacity
-          style={[
-            styles.primaryBtn,
-            rating === 0 && styles.primaryBtnDisabled,
-          ]}
+          style={[styles.primaryBtn, rating === 0 && styles.primaryBtnDisabled]}
           onPress={handleSubmit}
           disabled={rating === 0 || isLoading}
           activeOpacity={0.85}
@@ -455,5 +503,64 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.caption,
     color: colors.onSecondary,
     letterSpacing: 0.5,
+  },
+
+  // =========================
+  // PAYMENT STATE
+  // =========================
+  paymentCard: {
+    backgroundColor: colors.surfaceLowest,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    marginBottom: spacing.xl,
+    ...shadows.card,
+  },
+  paymentLabel: {
+    fontFamily: typography.label,
+    fontSize: typography.sizes.bodyMd,
+    color: colors.onSurfaceMuted,
+    marginBottom: spacing.xs,
+  },
+  paymentAmount: {
+    fontFamily: typography.display,
+    fontSize: 36,
+    color: colors.primaryContainer,
+    marginBottom: spacing.md,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.surfaceHigh,
+    marginVertical: spacing.md,
+  },
+  paymentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  paymentDesc: {
+    fontFamily: typography.body,
+    fontSize: typography.sizes.bodySm,
+    color: colors.onSurfaceVariant,
+    flex: 1,
+  },
+  paymentMethods: {
+    marginBottom: spacing["2xl"],
+  },
+  methodOptionActive: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: colors.surfaceLowest,
+    padding: spacing.base,
+    borderRadius: radius.lg,
+    borderWidth: 2,
+    borderColor: colors.primaryContainer,
+    ...shadows.float,
+  },
+  methodOptionText: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.sizes.bodyMd,
+    color: colors.onSurface,
   },
 });

@@ -1,14 +1,22 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions, Alert, Linking } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import * as Location from "expo-location";
+import * as Clipboard from "expo-clipboard";
+import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
 import { strings } from "@/constants/localization";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useSettingsStore } from "@/store/useSettingsStore";
 import { useProviderStore } from "@/store/useProviderStore";
-import { subscribeRequest, ServiceRequest } from "@/lib/database";
+import {
+  subscribeRequest,
+  updateRequestStatus,
+  ServiceRequest,
+} from "@/lib/database";
 
 const { width } = Dimensions.get("window");
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
@@ -16,6 +24,7 @@ const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 export default function ProviderRequestDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuthStore();
+  const { mapProvider } = useSettingsStore();
   const { acceptRequest, declineRequest, isLoading } = useProviderStore();
   const [request, setRequest] = useState<ServiceRequest | null>(null);
   const [providerLocation, setProviderLocation] = useState<{ latitude: number, longitude: number } | null>(null);
@@ -37,7 +46,7 @@ export default function ProviderRequestDetail() {
   }, []);
 
   const handleAccept = async () => {
-    if (!id || !user?.uid) return;
+    if (!id || !user) return;
     await acceptRequest(id, user.uid);
   };
 
@@ -47,7 +56,94 @@ export default function ProviderRequestDetail() {
     router.back();
   };
 
-  const generateMapHtml = () => {
+  const handleComplete = async () => {
+    if (!id) return;
+    // O prestador marca como concluído. O mock update fará o status ir pra 'completed'.
+    // O cliente vai pagar e o providerStore será atualizado no lado do cliente.
+    await updateRequestStatus(id, 'completed');
+    useProviderStore.getState().clearActiveRequest();
+    Alert.alert("Sucesso!", "Serviço concluído. Aguardando pagamento e avaliação do cliente.");
+    router.replace("/(provider)");
+  };
+
+  const handleCopyAddress = async () => {
+    if (request?.location) {
+      await Clipboard.setStringAsync(`${request.location.latitude}, ${request.location.longitude}`);
+      Alert.alert("Copiado!", "Coordenadas copiadas para a área de transferência.");
+    }
+  };
+
+  const handleNavigateMaps = () => {
+    if (request?.location) {
+      const url = `google.navigation:q=${request.location.latitude},${request.location.longitude}`;
+      Linking.canOpenURL(url).then(supported => {
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          // Fallback para navegador web se não tiver o app instalado
+          Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${request.location.latitude},${request.location.longitude}`);
+        }
+      });
+    }
+  };
+
+  const generateOsmHtml = () => {
+    if (!request?.location || !providerLocation) return "";
+    const isAccepted = request.status !== 'pending';
+    
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+          <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+          <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+          ${isAccepted ? `
+            <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+            <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+          ` : ''}
+          <style>
+            body { margin: 0; padding: 0; }
+            #map { width: 100vw; height: 100vh; }
+            .leaflet-control-attribution { display: none; }
+            .marker-client { width: 24px; height: 24px; background-color: ${colors.primaryContainer}; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
+            .marker-provider { width: 20px; height: 20px; background-color: #2196F3; border-radius: 50%; border: 3px solid white; }
+            .leaflet-routing-container { display: none !important; } /* Esconde o painel de texto, mantém só a linha */
+          </style>
+        </head>
+        <body>
+          <div id="map"></div>
+          <script>
+            var map = L.map('map', { zoomControl: false });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            
+            var clientPos = L.latLng(${request.location.latitude}, ${request.location.longitude});
+            var providerPos = L.latLng(${providerLocation.latitude}, ${providerLocation.longitude});
+            
+            L.marker(clientPos, { icon: L.divIcon({ className: '', html: '<div class="marker-client"></div>', iconSize: [30, 30] }) }).addTo(map);
+            
+            if (${isAccepted}) {
+              L.marker(providerPos, { icon: L.divIcon({ className: '', html: '<div class="marker-provider"></div>', iconSize: [26, 26] }) }).addTo(map);
+              
+              L.Routing.control({
+                waypoints: [providerPos, clientPos],
+                createMarker: function() { return null; },
+                lineOptions: { styles: [{ color: '${colors.primaryContainer}', weight: 5, opacity: 0.9 }] },
+                show: false, addWaypoints: false, routeWhileDragging: false, fitSelectedRoutes: false
+              }).addTo(map);
+            }
+            
+            map.setView(clientPos, 13);
+            setTimeout(function() {
+              map.flyTo(clientPos, 17, { duration: 1.5 });
+            }, 500);
+          </script>
+        </body>
+      </html>
+    `;
+  };
+
+  const generateGoogleHtml = () => {
     if (!request?.location || !providerLocation) return "";
     const isAccepted = request.status !== 'pending';
     
@@ -124,18 +220,28 @@ export default function ProviderRequestDetail() {
                   }],
                 });
                 flightPath.setMap(map);
-                
-                var bounds = new google.maps.LatLngBounds();
-                bounds.extend(providerPos);
-                bounds.extend(clientPos);
-                map.fitBounds(bounds, { padding: 50 });
               }
+              
+              map.setCenter(clientPos);
+              map.setZoom(12);
+              setTimeout(function() {
+                var z = 12;
+                var t = setInterval(function() {
+                  z++;
+                  map.setZoom(z);
+                  if (z >= 17) clearInterval(t);
+                }, 120);
+              }, 500);
             }
           </script>
           <script src="https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initMap" async defer></script>
         </body>
       </html>
     `;
+  };
+
+  const generateMapHtml = () => {
+    return mapProvider === "osm" ? generateOsmHtml() : generateGoogleHtml();
   };
 
   if (!request) return (
@@ -158,6 +264,7 @@ export default function ProviderRequestDetail() {
       <View style={styles.mapContainer}>
         {providerLocation ? (
           <WebView
+            key={mapProvider + "-" + request.status}
             ref={webviewRef}
             source={{ html: generateMapHtml() }}
             style={styles.map}
@@ -201,12 +308,34 @@ export default function ProviderRequestDetail() {
             </TouchableOpacity>
           </View>
         ) : (
-          <TouchableOpacity 
-            style={styles.chatBtn} 
-            onPress={() => router.push(`/(provider)/chat/${id}?cid=${request.clientId}`)}
-          >
-            <Text style={styles.chatBtnText}>💬 Abrir Chat com Cliente</Text>
-          </TouchableOpacity>
+          <View style={{ gap: spacing.md }}>
+            <View style={styles.actions}>
+              <TouchableOpacity style={styles.copyBtn} onPress={handleCopyAddress} activeOpacity={0.75}>
+                <Feather name="copy" size={18} color={colors.onSurfaceVariant} />
+                <Text style={styles.copyBtnText}>Copiar GPS</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.navBtn} onPress={handleNavigateMaps} activeOpacity={0.75}>
+                <Feather name="navigation" size={18} color="#fff" />
+                <Text style={styles.navBtnText}>Navegar no Maps</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.actions}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={handleDecline} activeOpacity={0.75}>
+                <Feather name="x-circle" size={18} color="#ef4444" />
+                <Text style={styles.cancelBtnText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.chatBtn} onPress={() => router.push(`/(provider)/chat/${id}?cid=${request.clientId}`)} activeOpacity={0.75}>
+                <Feather name="message-circle" size={18} color={colors.onSurface} />
+                <Text style={styles.chatBtnText}>Chat Cliente</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.completeBtn} onPress={handleComplete} activeOpacity={0.85}>
+              <Feather name="check-circle" size={20} color={colors.onPrimary} />
+              <Text style={styles.completeBtnText}>Concluir Serviço</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </SafeAreaView>
@@ -236,12 +365,23 @@ const styles = StyleSheet.create({
   priceValue: { fontFamily: typography.headline, fontSize: typography.sizes.titleSm, color: colors.primaryContainer },
 
   footer: { marginTop: "auto", paddingHorizontal: spacing.xl, paddingBottom: spacing["2xl"] },
-  actions: { flexDirection: "row", gap: spacing.md },
+  actions: { flexDirection: "row", gap: spacing.sm },
   declineBtn: { flex: 1, backgroundColor: colors.surfaceHigh, borderRadius: radius.full, paddingVertical: 18, alignItems: "center" },
   declineBtnText: { fontFamily: typography.bodyBold, fontSize: typography.sizes.titleSm, color: colors.onSurfaceVariant },
   acceptBtn: { flex: 2, backgroundColor: colors.primaryContainer, borderRadius: radius.full, paddingVertical: 18, alignItems: "center" },
   acceptBtnText: { fontFamily: typography.bodyBold, fontSize: typography.sizes.titleSm, color: colors.onPrimary },
   
-  chatBtn: { backgroundColor: colors.primaryContainer, borderRadius: radius.full, paddingVertical: 18, alignItems: "center", ...shadows.card },
-  chatBtnText: { fontFamily: typography.bodyBold, fontSize: typography.sizes.titleSm, color: colors.onPrimary },
+  cancelBtn: { flex: 1, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 6, backgroundColor: "#fee2e2", borderRadius: radius.full, paddingVertical: 16 },
+  cancelBtnText: { fontFamily: typography.bodyBold, fontSize: typography.sizes.bodyMd, color: "#ef4444" },
+  
+  chatBtn: { flex: 1.5, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 6, backgroundColor: colors.surfaceHighest, borderRadius: radius.full, paddingVertical: 16 },
+  chatBtnText: { fontFamily: typography.bodyBold, fontSize: typography.sizes.bodyMd, color: colors.onSurface },
+  
+  completeBtn: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, backgroundColor: colors.primaryContainer, borderRadius: radius.full, paddingVertical: 18, ...shadows.float, marginTop: spacing.xs },
+  completeBtnText: { fontFamily: typography.bodyBold, fontSize: typography.sizes.titleSm, color: colors.onPrimary },
+
+  copyBtn: { flex: 1, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 6, backgroundColor: colors.surfaceHigh, borderRadius: radius.md, paddingVertical: 14 },
+  copyBtnText: { fontFamily: typography.bodyBold, fontSize: 13, color: colors.onSurfaceVariant },
+  navBtn: { flex: 1.5, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 6, backgroundColor: '#3b82f6', borderRadius: radius.md, paddingVertical: 14 },
+  navBtnText: { fontFamily: typography.bodyBold, fontSize: 13, color: '#fff' },
 });

@@ -6,6 +6,7 @@ import { Platform, View } from "react-native";
 import { colors, typography } from "@/constants/theme";
 import { strings } from "@/constants/localization";
 import { Feather } from "@expo/vector-icons";
+import { ActiveRequestBanner } from "@/components/ActiveRequestBanner";
 
 // Ícones vetorais (Feather)
 function TabIcon({ name, focused, color }: { name: React.ComponentProps<typeof Feather>['name']; focused: boolean; color: string }) {
@@ -18,6 +19,7 @@ function TabIcon({ name, focused, color }: { name: React.ComponentProps<typeof F
 
 export default function ProviderLayout() {
   return (
+    <>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -76,5 +78,7 @@ export default function ProviderLayout() {
       <Tabs.Screen name="edit-service/[id]" options={{ href: null }} />
       <Tabs.Screen name="chat/[id]" options={{ href: null }} />
     </Tabs>
+    <ActiveRequestBanner />
+    </>
   );
 }

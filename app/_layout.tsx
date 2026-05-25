@@ -6,6 +6,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import "react-native-reanimated";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { LogBox } from "react-native";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -69,12 +70,14 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(client)" />
-      <Stack.Screen name="(provider)" />
-      <Stack.Screen name="+not-found" />
-    </Stack>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(client)" />
+        <Stack.Screen name="(provider)" />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+    </GestureHandlerRootView>
   );
 }

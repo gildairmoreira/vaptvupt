@@ -17,6 +17,7 @@ interface ProviderState {
   todayEarnings: number;
   todayServices: number;
   avgRating: number;
+  balance: number; // Saldo da carteira (já descontada a taxa da plataforma)
   isLoading: boolean;
   error: string | null;
 
@@ -27,6 +28,8 @@ interface ProviderState {
   startListening: () => () => void;
   setMetrics: (earnings: number, services: number, rating: number) => void;
   clearError: () => void;
+  addBalance: (amount: number) => void;
+  clearActiveRequest: () => void;
 }
 
 export const useProviderStore = create<ProviderState>((set, get) => ({
@@ -36,6 +39,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   todayEarnings: 0,
   todayServices: 0,
   avgRating: 0,
+  balance: 0,
   isLoading: false,
   error: null,
 
@@ -98,4 +102,10 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   },
 
   clearError: () => set({ error: null }),
+
+  addBalance: (amount) => {
+    set((state) => ({ balance: state.balance + amount }));
+  },
+
+  clearActiveRequest: () => set({ activeRequestId: null }),
 }));

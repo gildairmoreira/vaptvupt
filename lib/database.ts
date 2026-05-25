@@ -56,184 +56,62 @@ export interface ChatMessage {
 }
 
 // ========================
-// DADOS MOCK DE PRESTADORES (BH)
-// ========================
-
-const bhProviders: ProviderData[] = [
-  { uid: 'p1', name: 'João Silva', categories: ['plumbing'], location: { latitude: -19.9329, longitude: -43.9378 }, basePrice: 100, available: true, rating: 4.8, reviewCount: 20, verified: true, bio: "Encanador certificado com 10 anos de experiência. Atendo toda BH." },
-  { uid: 'p2', name: 'Maria Eletricista', categories: ['electrical'], location: { latitude: -19.9212, longitude: -43.9445 }, basePrice: 150, available: true, rating: 4.9, reviewCount: 35, verified: true, bio: "Especialista em instalações residenciais na Savassi e Lourdes." },
-  { uid: 'p3', name: 'Carlos Montador', categories: ['assembly'], location: { latitude: -19.9455, longitude: -43.9283 }, basePrice: 80, available: true, rating: 4.7, reviewCount: 15, verified: false, bio: "Montagem de móveis no Buritis e Belvedere." },
-  { uid: 'p4', name: 'Ana Faxinas', categories: ['cleaning'], location: { latitude: -19.9105, longitude: -43.9533 }, basePrice: 120, available: true, rating: 5.0, reviewCount: 50, verified: true, bio: "Limpeza pesada em apartamentos no Centro e Barro Preto." },
-  { uid: 'p5', name: 'Pedro Pinturas', categories: ['painting'], location: { latitude: -19.8655, longitude: -43.9712 }, basePrice: 200, available: true, rating: 4.6, reviewCount: 12, verified: true, bio: "Pintura residencial e comercial na região da Pampulha." },
-  { uid: 'p6', name: 'Marcos Ar-condicionado', categories: ['aircon'], location: { latitude: -19.9555, longitude: -43.9112 }, basePrice: 180, available: true, rating: 4.9, reviewCount: 28, verified: true, bio: "Instalação e manutenção no Sion e Mangabeiras." },
-  { uid: 'p7', name: 'Lucia Jardineira', categories: ['gardening'], location: { latitude: -19.9012, longitude: -43.9145 }, basePrice: 90, available: true, rating: 4.8, reviewCount: 22, verified: false, bio: "Cuidado de jardins no Santa Efigênia e Floresta." },
-];
-
-// ========================
-// FUNÇÕES DE PRESTADOR
-// ========================
-
-export const createService = async (data: any) => {
-  console.log("Mock service created", data);
-  return { id: `service_${Date.now()}` };
-};
-
-export const subscribeAvailableProviders = (callback: (providers: ProviderData[]) => void) => {
-  callback(bhProviders);
-  return () => {};
-};
-
-// Busca prestadores por texto (nome ou categoria)
-export const searchProviders = async (query: string): Promise<ProviderData[]> => {
-  const q = query.toLowerCase();
-  // Mapeamento de termos em PT-BR para chaves de categoria
-  const categoryMap: Record<string, string> = {
-    'encanador': 'plumbing', 'encanamento': 'plumbing',
-    'eletricista': 'electrical', 'elétrica': 'electrical', 'eletrica': 'electrical',
-    'faxina': 'cleaning', 'limpeza': 'cleaning', 'faxineira': 'cleaning',
-    'montagem': 'assembly', 'montador': 'assembly',
-    'pintura': 'painting', 'pintor': 'painting',
-    'jardinagem': 'gardening', 'jardineiro': 'gardening', 'jardineira': 'gardening',
-    'ar-condicionado': 'aircon', 'ar condicionado': 'aircon',
-  };
-
-  return bhProviders.filter(p => {
-    // Busca por nome
-    if (p.name.toLowerCase().includes(q)) return true;
-    // Busca por categoria traduzida
-    const mappedCat = categoryMap[q];
-    if (mappedCat && p.categories.includes(mappedCat)) return true;
-    // Busca direta por chave de categoria
-    if (p.categories.some(c => c.includes(q))) return true;
-    return false;
-  });
-};
-
-export const getProvider = async (id: string): Promise<ProviderData | null> => {
-  const found = bhProviders.find(p => p.uid === id);
-  if (found) return found;
-  return { uid: id, name: 'Prestador Teste', categories: ['plumbing'], location: { latitude: -19.9329, longitude: -43.9378 }, basePrice: 100, available: true, rating: 4.8, reviewCount: 20, verified: true };
-};
-
-export const getProviderData = getProvider;
-
-export const updateProviderData = async (uid: string, data: Partial<ProviderData>) => {
-  console.log("Updating provider", uid, data);
-  return;
-};
-
-export const setProviderAvailability = async (uid: string, available: boolean) => {
-  return;
-};
-
-// ========================
-// FUNÇÕES DE SOLICITAÇÃO
-// ========================
-
-export const createServiceRequest = async (data: ServiceRequest): Promise<string> => {
-  return new Promise((resolve) => setTimeout(() => resolve('mock-request-id-' + Date.now()), 1000));
-};
-
-export const updateRequestStatus = async (requestId: string, status: string, providerId?: string): Promise<void> => {
-  return;
-};
-
-export const subscribeRequest = (requestId: string, callback: (req: ServiceRequest) => void) => {
-  setTimeout(() => {
-    callback({
-      id: requestId,
-      clientId: 'user-1',
-      providerId: 'p1',
-      serviceType: 'Encanamento',
-      status: 'pending',
-      location: { latitude: -19.9329, longitude: -43.9378 },
-      description: 'Vazamento na pia',
-      isUrgent: true,
-      estimatedPrice: 120,
-      createdAt: new Date()
-    });
-  }, 500);
-  return () => {};
-};
-
-export const subscribePendingRequests = (callback: (reqs: ServiceRequest[]) => void) => {
-  setTimeout(() => {
-    callback([
-      {
-        id: 'mock-req-p1',
-        clientId: 'user-client-1',
-        providerId: '',
-        serviceType: 'Encanamento',
-        status: 'pending',
-        location: { latitude: -19.9329, longitude: -43.9378 },
-        description: 'Vazamento urgente no banheiro',
-        isUrgent: true,
-        estimatedPrice: 150,
-        createdAt: new Date()
-      }
-    ]);
-  }, 2000);
-  return () => {};
-};
-
-export const subscribeProviderRequests = (providerId: string, callback: (reqs: ServiceRequest[]) => void) => {
-  callback([]);
-  return () => {};
-};
-
-export const getClientHistory = async (clientId: string): Promise<ServiceRequest[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([]);
-    }, 800);
-  });
-};
-
-// ========================
 // FUNÇÕES DE USUÁRIO
 // ========================
 
 export const getUser = async (uid: string): Promise<UserData | null> => {
-  // Tenta buscar no Supabase primeiro
   try {
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('uid', uid)
+      .eq('id', uid)
       .single();
 
-    if (data && !error) {
-      return {
-        uid: data.uid,
-        name: data.name,
-        email: data.email,
-        role: data.role,
-        phone: data.phone,
-        photoUrl: data.photoUrl,
-      };
-    }
-  } catch {
-    // Fallback para mock se Supabase não estiver disponível
-  }
+    if (error || !data) return null;
 
-  // Mock fallback
-  return { uid, name: 'Usuário Teste', email: 'teste@teste.com', role: 'client' };
+    return {
+      uid: data.id,
+      name: data.name,
+      email: data.email,
+      role: data.role,
+      phone: data.phone || undefined,
+      photoUrl: data.photo_url || undefined,
+    };
+  } catch (err) {
+    return null;
+  }
 };
 
-export const createUserProfile = async (userData: UserData): Promise<void> => {
-  // Salva perfil do user no Supabase após signup
+export const createProfile = async (userData: { uid: string, email: string, role: string, name: string }) => {
   try {
-    const { error } = await supabase
+    const { error: userError } = await supabase
       .from('users')
       .insert({
-        uid: userData.uid,
-        name: userData.name,
+        id: userData.uid,
         email: userData.email,
         role: userData.role,
+        name: userData.name,
       });
 
-    if (error) {
-      console.error('Erro ao salvar perfil no Supabase:', error.message);
+    if (userError) {
+      console.error('Erro ao salvar perfil no Supabase:', userError.message);
+      return;
+    }
+
+    if (userData.role === 'provider') {
+      const { error: provError } = await supabase
+        .from('providers')
+        .insert({
+          id: userData.uid,
+          categories: [],
+          available: true,
+          rating: 0,
+          review_count: 0,
+        });
+        
+      if (provError) {
+        console.error('Erro ao salvar perfil de provider no Supabase:', provError.message);
+      }
     }
   } catch (err) {
     console.error('Erro de conexão ao salvar perfil:', err);
@@ -241,122 +119,305 @@ export const createUserProfile = async (userData: UserData): Promise<void> => {
 };
 
 export const updateUser = async (uid: string, data: any) => {
-  return;
+  const updates: any = {};
+  if (data.name) updates.name = data.name;
+  if (data.phone) updates.phone = data.phone;
+  if (data.photoUrl) updates.photo_url = data.photoUrl;
+  
+  await supabase.from('users').update(updates).eq('id', uid);
 };
 
 // ========================
-// AVALIAÇÕES E REVIEWS
+// FUNÇÕES DE PRESTADOR
+// ========================
+
+export const createService = async (data: any) => {
+  const { data: prov } = await supabase.from('providers').select('categories').eq('id', data.provider_id).single();
+  if (prov) {
+    const categories = Array.from(new Set([...prov.categories, data.category]));
+    await supabase.from('providers').update({
+      categories,
+      base_price: data.base_price,
+      latitude: data.location?.latitude,
+      longitude: data.location?.longitude,
+      bio: data.description,
+      available: true
+    }).eq('id', data.provider_id);
+  }
+};
+
+export const subscribeAvailableProviders = (callback: (providers: ProviderData[]) => void) => {
+  const fetchProviders = async () => {
+    const { data } = await supabase.from('providers').select('*, users!inner(name, photo_url)').eq('available', true);
+    if (data) {
+      callback(data.map(p => ({
+        uid: p.id,
+        name: p.users.name,
+        photoUrl: p.users.photo_url,
+        categories: p.categories,
+        location: p.latitude && p.longitude ? { latitude: p.latitude, longitude: p.longitude } : null,
+        basePrice: p.base_price,
+        available: p.available,
+        rating: p.rating,
+        reviewCount: p.review_count,
+        verified: p.verified,
+        bio: p.bio
+      })));
+    }
+  };
+  fetchProviders();
+
+  const sub = supabase.channel('public:providers')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'providers' }, fetchProviders)
+    .subscribe();
+
+  return () => { supabase.removeChannel(sub); };
+};
+
+export const searchProviders = async (query: string): Promise<ProviderData[]> => {
+  const { data } = await supabase.from('providers').select('*, users!inner(name, photo_url)').eq('available', true);
+  if (!data) return [];
+  
+  const q = query.toLowerCase();
+  const categoryMap: Record<string, string> = {
+    'encanador': 'plumbing', 'encanamento': 'plumbing',
+    'eletricista': 'electrical', 'elétrica': 'electrical', 'eletrica': 'electrical',
+    'faxina': 'cleaning', 'limpeza': 'cleaning', 'faxineira': 'cleaning',
+    'montagem': 'assembly', 'montador': 'assembly',
+    'pintura': 'painting', 'pintor': 'painting',
+    'jardinagem': 'gardening', 'jardineiro': 'gardening', 'jardineira': 'gardening', 'jardim': 'gardening',
+    'ar-condicionado': 'aircon', 'ar condicionado': 'aircon', 'ar-cond.': 'aircon',
+    'outros': 'other', 'outro': 'other',
+  };
+
+  const providers = data.map(p => ({
+    uid: p.id,
+    name: p.users.name,
+    photoUrl: p.users.photo_url,
+    categories: p.categories,
+    location: p.latitude && p.longitude ? { latitude: p.latitude, longitude: p.longitude } : null,
+    basePrice: p.base_price,
+    available: p.available,
+    rating: p.rating,
+    reviewCount: p.review_count,
+    verified: p.verified,
+    bio: p.bio
+  }));
+
+  return providers.filter(p => {
+    if (p.name.toLowerCase().includes(q)) return true;
+    const mappedCat = categoryMap[q];
+    if (mappedCat && p.categories.includes(mappedCat)) return true;
+    if (p.categories.some(c => c.includes(q))) return true;
+    return false;
+  });
+};
+
+export const getProvider = async (id: string): Promise<ProviderData | null> => {
+  const { data } = await supabase.from('providers').select('*, users!inner(name, photo_url)').eq('id', id).single();
+  if (!data) return null;
+  return {
+    uid: data.id, name: data.users.name, photoUrl: data.users.photo_url,
+    categories: data.categories, location: data.latitude && data.longitude ? { latitude: data.latitude, longitude: data.longitude } : null,
+    basePrice: data.base_price, available: data.available, rating: data.rating,
+    reviewCount: data.review_count, verified: data.verified, bio: data.bio
+  };
+};
+
+export const getProviderData = getProvider;
+
+export const updateProviderData = async (uid: string, data: Partial<ProviderData>) => {
+  const updates: any = {};
+  if (data.categories) updates.categories = data.categories;
+  if (data.basePrice !== undefined) updates.base_price = data.basePrice;
+  if (data.location) { updates.latitude = data.location.latitude; updates.longitude = data.location.longitude; }
+  if (data.bio !== undefined) updates.bio = data.bio;
+  if (data.available !== undefined) updates.available = data.available;
+  await supabase.from('providers').update(updates).eq('id', uid);
+};
+
+export const setProviderAvailability = async (uid: string, available: boolean) => {
+  await supabase.from('providers').update({ available }).eq('id', uid);
+};
+
+// ========================
+// AVALIAÇÕES
 // ========================
 
 export const getProviderReviews = async (id: string): Promise<Review[]> => {
-  return [
-    { id: 'r1', rating: 5, comment: "Excelente serviço, muito rápido!", authorName: "Carlos", createdAt: new Date() },
-    { id: 'r2', rating: 4, comment: "Chegou no horário e resolveu o problema.", authorName: "Maria", createdAt: new Date() }
-  ];
+  const { data } = await supabase
+    .from('reviews')
+    .select('id, rating, comment, created_at, users(name)')
+    .eq('provider_id', id)
+    .order('created_at', { ascending: false });
+
+  if (!data) return [];
+  
+  return data.map((r: any) => ({
+    id: r.id,
+    rating: r.rating,
+    comment: r.comment,
+    authorName: r.users?.name || 'Cliente',
+    createdAt: new Date(r.created_at)
+  }));
 };
 
-export const saveReview = async (data: {
-  requestId: string;
-  clientId: string;
-  providerId: string;
-  rating: number;
-  comment?: string;
-}) => {
-  return;
+export const saveReview = async (providerId: string, clientId: string, rating: number, comment: string) => {
+  const { error } = await supabase.from('reviews').insert({
+    provider_id: providerId,
+    client_id: clientId,
+    rating,
+    comment
+  });
+  if (error) throw new Error(error.message);
 };
 
 // ========================
-// CHAT — Mock funcional com estado em memória
+// FUNÇÕES DE SOLICITAÇÃO
 // ========================
 
-// Armazena mensagens em memória para simular chat funcional
-const chatStore: Record<string, ChatMessage[]> = {};
-const chatListeners: Record<string, ((msgs: ChatMessage[]) => void)[]> = {};
+export const createServiceRequest = async (data: ServiceRequest): Promise<string> => {
+  const { data: res, error } = await supabase.from('service_requests').insert({
+    client_id: data.clientId,
+    provider_id: data.providerId || null,
+    service_type: data.serviceType,
+    status: data.status,
+    latitude: data.location.latitude,
+    longitude: data.location.longitude,
+    description: data.description,
+    is_urgent: data.isUrgent,
+    estimated_price: data.estimatedPrice
+  }).select().single();
+  
+  if (error || !res) throw new Error(error?.message || "Failed to create request");
+  return res.id;
+};
 
-// Mensagens iniciais de exemplo para qualquer chat novo
-const initialMockMessages: Omit<ChatMessage, 'chatId'>[] = [
-  {
-    id: 'msg-1',
-    senderId: 'p1',
-    senderName: 'João Silva',
-    text: 'Olá! Vi sua solicitação. Posso ajudar sim!',
-    read: true,
-    createdAt: new Date(Date.now() - 300000),
-  },
-  {
-    id: 'msg-2',
-    senderId: 'mock-client-1',
-    senderName: 'Cliente Teste',
-    text: 'Ótimo! Qual o valor para um reparo de torneira?',
-    read: true,
-    createdAt: new Date(Date.now() - 240000),
-  },
-  {
-    id: 'msg-3',
-    senderId: 'p1',
-    senderName: 'João Silva',
-    text: 'Para reparo de torneira fico em torno de R$ 80 a R$ 120, dependendo da peça. Posso ir aí ainda hoje!',
-    read: true,
-    createdAt: new Date(Date.now() - 180000),
-  },
-];
+export const updateRequestStatus = async (requestId: string, status: string, providerId?: string): Promise<void> => {
+  const updates: any = { status };
+  if (providerId) updates.provider_id = providerId;
+  await supabase.from('service_requests').update(updates).eq('id', requestId);
+};
+
+export const getRequest = async (requestId: string): Promise<ServiceRequest | null> => {
+  const { data } = await supabase.from('service_requests').select('*').eq('id', requestId).single();
+  if (!data) return null;
+  return {
+    id: data.id, clientId: data.client_id, providerId: data.provider_id,
+    serviceType: data.service_type, status: data.status as any,
+    location: { latitude: data.latitude, longitude: data.longitude },
+    description: data.description, isUrgent: data.is_urgent,
+    estimatedPrice: data.estimated_price, createdAt: data.created_at
+  };
+};
+
+export const subscribeRequest = (requestId: string, callback: (req: ServiceRequest) => void) => {
+  const fetchReq = async () => {
+    const req = await getRequest(requestId);
+    if (req) callback(req);
+  };
+  fetchReq();
+  const sub = supabase.channel(`req_${requestId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'service_requests', filter: `id=eq.${requestId}` }, fetchReq)
+    .subscribe();
+  return () => { supabase.removeChannel(sub); };
+};
+
+export const subscribePendingRequests = (callback: (reqs: ServiceRequest[]) => void) => {
+  const fetchReqs = async () => {
+    const { data } = await supabase.from('service_requests').select('*').eq('status', 'pending');
+    if (data) {
+      callback(data.map(d => ({
+        id: d.id, clientId: d.client_id, providerId: d.provider_id,
+        serviceType: d.service_type, status: d.status as any,
+        location: { latitude: d.latitude, longitude: d.longitude },
+        description: d.description, isUrgent: d.is_urgent,
+        estimatedPrice: d.estimated_price, createdAt: d.created_at
+      })));
+    }
+  };
+  fetchReqs();
+  const sub = supabase.channel('pending_reqs')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'service_requests', filter: 'status=eq.pending' }, fetchReqs)
+    .subscribe();
+  return () => { supabase.removeChannel(sub); };
+};
+
+export const getUserRequests = async (uid: string) => {
+  const { data } = await supabase.from('service_requests').select('*').eq('client_id', uid).order('created_at', { ascending: false });
+  if (!data) return [];
+  return data.map(d => ({
+    id: d.id, clientId: d.client_id, providerId: d.provider_id, serviceType: d.service_type, status: d.status as any,
+    location: { latitude: d.latitude, longitude: d.longitude }, description: d.description, isUrgent: d.is_urgent,
+    estimatedPrice: d.estimated_price, createdAt: d.created_at
+  }));
+};
+
+export const getProviderRequests = async (uid: string) => {
+  const { data } = await supabase.from('service_requests').select('*').eq('provider_id', uid).order('created_at', { ascending: false });
+  if (!data) return [];
+  return data.map(d => ({
+    id: d.id, clientId: d.client_id, providerId: d.provider_id, serviceType: d.service_type, status: d.status as any,
+    location: { latitude: d.latitude, longitude: d.longitude }, description: d.description, isUrgent: d.is_urgent,
+    estimatedPrice: d.estimated_price, createdAt: d.created_at
+  }));
+};
+
+// ========================
+// CHAT 
+// ========================
 
 export const getOrCreateChat = async (reqId: string, clientId: string, provId: string) => {
-  const chatId = `chat-${reqId}`;
-
-  // Inicializa com mensagens mock se ainda não existir
-  if (!chatStore[chatId]) {
-    chatStore[chatId] = initialMockMessages.map(m => ({ ...m, chatId }));
-  }
-
-  return chatId;
+  const { data } = await supabase.from('chats').select('id').eq('request_id', reqId).single();
+  if (data) return data.id;
+  
+  const { data: newChat, error } = await supabase.from('chats').insert({ 
+    request_id: reqId, 
+    client_id: clientId, 
+    provider_id: provId 
+  }).select().single();
+  
+  if (error || !newChat) throw new Error("Could not create chat");
+  return newChat.id;
 };
 
 export const sendMessage = async (chatId: string, msg: ChatMessage) => {
-  // Cria mensagem com ID e timestamp
-  const newMsg: ChatMessage = {
-    ...msg,
-    id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-    chatId,
-    createdAt: new Date(),
-  };
-
-  // Adiciona ao store
-  if (!chatStore[chatId]) {
-    chatStore[chatId] = [];
-  }
-  chatStore[chatId].push(newMsg);
-
-  // Notifica todos os listeners deste chat
-  const listeners = chatListeners[chatId] || [];
-  listeners.forEach(cb => cb([...chatStore[chatId]]));
+  await supabase.from('messages').insert({ 
+    chat_id: chatId, 
+    sender_id: msg.senderId, 
+    text: msg.text, 
+    read: false 
+  });
 };
 
 export const subscribeMessages = (chatId: string, callback: (msgs: ChatMessage[]) => void) => {
-  // Registra listener
-  if (!chatListeners[chatId]) {
-    chatListeners[chatId] = [];
-  }
-  chatListeners[chatId].push(callback);
-
-  // Emite estado atual imediatamente
-  const currentMsgs = chatStore[chatId] || [];
-  setTimeout(() => callback([...currentMsgs]), 50);
-
-  // Retorna função de cleanup
-  return () => {
-    const idx = chatListeners[chatId]?.indexOf(callback);
-    if (idx !== undefined && idx >= 0) {
-      chatListeners[chatId].splice(idx, 1);
+  const fetchMsgs = async () => {
+    const { data } = await supabase.from('messages')
+      .select('*, users!inner(name)')
+      .eq('chat_id', chatId)
+      .order('created_at', { ascending: true });
+      
+    if (data) {
+      callback(data.map(d => ({ 
+        id: d.id, 
+        chatId: d.chat_id, 
+        senderId: d.sender_id, 
+        senderName: d.users.name, 
+        text: d.text, 
+        read: d.read, 
+        createdAt: d.created_at 
+      })));
     }
   };
+  
+  fetchMsgs();
+  const sub = supabase.channel(`chat_${chatId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` }, fetchMsgs)
+    .subscribe();
+    
+  return () => { supabase.removeChannel(sub); };
 };
 
 export const markMessagesRead = async (chatId: string, uid: string) => {
-  const msgs = chatStore[chatId] || [];
-  msgs.forEach(m => {
-    if (m.senderId !== uid) {
-      m.read = true;
-    }
-  });
+  await supabase.from('messages').update({ read: true }).eq('chat_id', chatId).neq('sender_id', uid);
 };

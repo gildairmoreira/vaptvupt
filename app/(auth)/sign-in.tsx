@@ -182,15 +182,7 @@ export default function SignIn() {
             </View>
           )}
 
-          {/* Dev Bypass Buttons */}
-          <View style={{ flexDirection: "row", justifyContent: "space-around", marginTop: 20 }}>
-            <TouchableOpacity onPress={() => { useAuthStore.getState().devBypass("client"); router.replace("/"); }} style={{ padding: 10, backgroundColor: "#e0e0e0", borderRadius: 8 }}>
-              <Text style={{ fontFamily: typography.bodyBold }}>Mock Cliente</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => { useAuthStore.getState().devBypass("provider"); router.replace("/"); }} style={{ padding: 10, backgroundColor: "#e0e0e0", borderRadius: 8 }}>
-              <Text style={{ fontFamily: typography.bodyBold }}>Mock Prestador</Text>
-            </TouchableOpacity>
-          </View>
+
 
           {/* Termos */}
           <Text style={styles.terms}>

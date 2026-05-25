@@ -6,10 +6,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
 import { strings } from "@/constants/localization";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useSettingsStore } from "@/store/useSettingsStore";
 import { updateUser } from "@/lib/database";
 
 export default function ProviderProfile() {
   const { user, logout, updateUserData } = useAuthStore();
+  const { mapProvider, toggleMapProvider } = useSettingsStore();
 
   const handleLogout = () => {
     Alert.alert("Sair", strings.profile.logoutConfirm, [
@@ -49,6 +51,11 @@ export default function ProviderProfile() {
 
         {/* Menu */}
         <View style={styles.menu}>
+          <TouchableOpacity style={styles.menuItem} onPress={toggleMapProvider}>
+            <Text style={styles.menuEmoji}>🗺️</Text>
+            <Text style={styles.menuLabel}>Mapa: {mapProvider === "osm" ? "OpenStreetMap" : "Google Maps"}</Text>
+            <Text style={styles.menuArrow}>›</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.menuItem} onPress={() => router.push("/(provider)/service/create")}>
             <Text style={styles.menuEmoji}>➕</Text>
             <Text style={styles.menuLabel}>Criar Anúncio de Serviço</Text>

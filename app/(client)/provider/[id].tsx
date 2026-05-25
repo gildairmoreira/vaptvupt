@@ -27,32 +27,61 @@ export default function ProviderDetail() {
 
   useEffect(() => {
     const load = async () => {
-      if (!id) return;
-      const [providerData, reviewData, locResult] = await Promise.all([
+      if (!id) {
+        setIsLoading(false);
+        return;
+      }
+      
+      const [providerData, reviewData] = await Promise.all([
         getProvider(id),
         getProviderReviews(id),
-        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null),
       ]);
       setProvider(providerData);
       setReviews(reviewData);
-      if (locResult) setUserLocation([locResult.coords.latitude, locResult.coords.longitude]);
       setIsLoading(false);
+      
+      // Busca localização silenciosamente em background sem travar o carregamento inicial
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          setUserLocation([loc.coords.latitude, loc.coords.longitude]);
+        }
+      } catch (e) {
+        console.warn("Could not get initial location");
+      }
     };
     load();
   }, [id]);
 
   const handleRequest = async () => {
     if (!user?.uid || !provider) return;
-    if (!userLocation) {
-      Alert.alert("Localização necessária", strings.errors.locationPermission);
-      return;
-    }
+    
     setIsSending(true);
+    let finalLocation = userLocation;
+    
+    // Se o userLocation ainda não foi carregado, tenta forçar a busca agora
+    if (!finalLocation) {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+          finalLocation = [loc.coords.latitude, loc.coords.longitude];
+          setUserLocation(finalLocation);
+        }
+      } catch (e) {
+        // Falhou de vez
+      }
+    }
+    
+    // Fallback final se o GPS estiver desligado ou sem permissão
+    const coords = finalLocation || [-19.9167, -43.9345];
+    
     try {
       selectProvider(provider);
       const requestId = await sendRequest(
         user.uid,
-        { latitude: userLocation[0], longitude: userLocation[1] },
+        { latitude: coords[0], longitude: coords[1] },
         message
       );
       router.push(`/(client)/request/${requestId}`);

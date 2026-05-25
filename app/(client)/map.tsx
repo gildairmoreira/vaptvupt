@@ -8,6 +8,7 @@ import * as Location from "expo-location";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { Feather } from "@expo/vector-icons";
+import { useSettingsStore } from "@/store/useSettingsStore";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
 import { strings } from "@/constants/localization";
 import { searchProviders, ProviderData } from "@/lib/database";
@@ -23,6 +24,7 @@ export default function SearchMap() {
   const [providers, setProviders] = useState<ProviderData[]>([]);
   const [userLocation, setUserLocation] = useState<{ latitude: number, longitude: number } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { mapProvider } = useSettingsStore();
 
   useEffect(() => {
     const init = async () => {
@@ -42,8 +44,9 @@ export default function SearchMap() {
       if (results.length > 0 && webviewRef.current && results[0].location) {
         webviewRef.current.injectJavaScript(`
           if (window.map) {
+            ${mapProvider === "osm" ? `window.map.setView([${results[0].location.latitude}, ${results[0].location.longitude}], 14);` : `
             window.map.panTo({ lat: ${results[0].location.latitude}, lng: ${results[0].location.longitude} });
-            window.map.setZoom(14);
+            window.map.setZoom(14);`}
           }
           true;
         `);
@@ -61,6 +64,84 @@ export default function SearchMap() {
   };
 
   const generateMapHtml = () => {
+    return mapProvider === "osm" ? generateOsmHtml() : generateGoogleHtml();
+  };
+
+  const generateOsmHtml = () => {
+    if (!userLocation) return "";
+    const providersJson = JSON.stringify(providers.filter(p => p.location));
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+          <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+          <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+          <style>
+            body { margin: 0; padding: 0; }
+            #map { width: 100vw; height: 100vh; }
+            .leaflet-control-attribution { display: none; }
+            .marker-badge {
+              width: 32px; height: 32px; border-radius: 16px;
+              background-color: ${colors.surfaceLowest};
+              display: flex; justify-content: center; align-items: center;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+              border: 2px solid ${colors.primaryContainer};
+            }
+            .marker-badge svg { width: 16px; height: 16px; stroke: ${colors.onSurfaceVariant}; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+            .user-marker {
+              width: 16px; height: 16px; background-color: #2196F3;
+              border-radius: 50%; border: 3px solid white;
+              box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            }
+          </style>
+        </head>
+        <body>
+          <div id="map"></div>
+          <script>
+            var map = L.map('map', { zoomControl: false }).setView([${userLocation.latitude}, ${userLocation.longitude}], 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+            L.marker([${userLocation.latitude}, ${userLocation.longitude}], {
+              icon: L.divIcon({ className: '', html: '<div class="user-marker"></div>', iconSize: [22, 22] })
+            }).addTo(map);
+
+            var providers = ${providersJson};
+            var categoryIcons = {
+              cleaning: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', 
+              plumbing: '<svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>', 
+              electrical: '<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+              assembly: '<svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>', 
+              painting: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', 
+              gardening: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', 
+              aircon: '<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
+            };
+            var defaultIcon = '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+
+            providers.forEach(function(p) {
+              var iconSvg = defaultIcon;
+              for (var i = 0; i < p.categories.length; i++) {
+                if (categoryIcons[p.categories[i]]) { iconSvg = categoryIcons[p.categories[i]]; break; }
+              }
+              var marker = L.marker([p.location.latitude, p.location.longitude], {
+                icon: L.divIcon({
+                  className: '',
+                  html: '<div class="marker-badge">' + iconSvg + '</div>',
+                  iconSize: [32, 32],
+                  iconAnchor: [16, 32]
+                })
+              }).addTo(map);
+              marker.on('click', function() {
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MARKER_CLICK', uid: p.uid }));
+              });
+            });
+          </script>
+        </body>
+      </html>
+    `;
+  };
+
+  const generateGoogleHtml = () => {
     if (!userLocation) return "";
     const providersJson = JSON.stringify(providers.filter(p => p.location));
     return `
@@ -73,14 +154,19 @@ export default function SearchMap() {
             #map { width: 100vw; height: 100vh; }
             
             .marker-badge {
-              width: 32px; height: 32px; border-radius: 16px;
+              width: 36px; height: 36px; border-radius: 50% 50% 50% 0;
               background-color: ${colors.surfaceLowest};
               display: flex; justify-content: center; align-items: center;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+              box-shadow: 0 4px 12px rgba(0,0,0,0.2);
               border: 2px solid ${colors.primaryContainer};
+              transform: rotate(-45deg);
               cursor: pointer;
             }
-            .marker-badge svg { width: 16px; height: 16px; stroke: ${colors.onSurfaceVariant}; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+            .marker-badge svg { 
+              width: 18px; height: 18px; stroke: ${colors.primaryContainer}; 
+              stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; 
+              transform: rotate(45deg); 
+            }
           </style>
         </head>
         <body>

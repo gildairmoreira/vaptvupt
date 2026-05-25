@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
-import { getUser, createUserProfile, UserData } from "@/lib/database";
+import { getUser, createProfile, UserData } from "@/lib/database";
 
 interface AuthState {
   user: UserData | null;
@@ -12,7 +12,6 @@ interface AuthState {
   signup: (name: string, email: string, pass: string, role: "client" | "provider") => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  devBypass: (role: "client" | "provider") => void;
   updateUserData: (data: Partial<UserData>) => void;
   clearError: () => void;
   initAuthListener: () => () => void;
@@ -27,7 +26,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initAuthListener: () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        getUser(session.user.id).then(u => set({ user: u, isAuthenticated: true, isLoading: false }));
+        getUser(session.user.id).then(u => set({ user: u, isAuthenticated: !!u, isLoading: false }));
       } else {
         set({ user: null, isAuthenticated: false, isLoading: false });
       }
@@ -35,7 +34,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        getUser(session.user.id).then(u => set({ user: u, isAuthenticated: true, isLoading: false }));
+        getUser(session.user.id).then(u => set({ user: u, isAuthenticated: !!u, isLoading: false }));
       } else {
         set({ user: null, isAuthenticated: false, isLoading: false });
       }
@@ -50,7 +49,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       const u = await getUser(data.user.id);
-      set({ user: u, isAuthenticated: true, isLoading: false });
+      set({ user: u, isAuthenticated: !!u, isLoading: false });
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
       throw err;
@@ -65,7 +64,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (data.user) {
         const userData: UserData = { uid: data.user.id, name, email, role };
         // Salva perfil do usuário no Supabase
-        await createUserProfile(userData);
+        await createProfile(userData);
         set({ user: userData, isAuthenticated: true, isLoading: false });
       }
     } catch (err: any) {
@@ -87,21 +86,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
     }
-  },
-
-  devBypass: (role) => {
-    set({
-      user: {
-        uid: role === "client" ? "mock-client-1" : "mock-provider-1",
-        email: `${role}@test.com`,
-        name: role === "client" ? "Cliente Teste" : "Prestador Teste",
-        role: role,
-        photoUrl: "",
-      },
-      isAuthenticated: true,
-      isLoading: false,
-      error: null
-    });
   },
 
   clearError: () => set({ error: null }),

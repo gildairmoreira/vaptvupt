@@ -23,6 +23,7 @@ import Animated, {
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
 import { strings } from "@/constants/localization";
 import { useRequestStore } from "@/store/useRequestStore";
+import { Feather } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
 
@@ -57,6 +58,10 @@ export default function RequestStatus() {
     transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 2.5]) }],
     opacity: interpolate(pulse.value, [0, 0.5, 1], [0.6, 0.3, 0]),
   }));
+
+  const handleMinimize = () => {
+    router.push("/(client)" as never);
+  };
 
   const handleCancel = () => {
     Alert.alert(strings.request.cancelConfirm, strings.request.cancelWarning, [
@@ -98,10 +103,10 @@ export default function RequestStatus() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.replace("/(client)")} style={styles.backBtn}>
-          <Text style={styles.backIcon}>←</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={handleMinimize}>
+          <Feather name="chevron-down" size={24} color={colors.onSurface} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Acompanhamento</Text>
+        <Text style={styles.headerTitle}>Acompanhar Solicitação</Text>
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
           {isAccepted && (
             <TouchableOpacity onPress={handleOpenChat} style={styles.chatHeaderBtn}>

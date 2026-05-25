@@ -2,14 +2,14 @@
 // Tela de carregamento minimalista: apenas a logo centralizada em fundo branco
 
 import React from "react";
-import { View, StyleSheet, Image } from "react-native";
+import { View, StyleSheet, Image, Animated } from "react-native";
 
 export default function SplashView() {
   return (
     <View style={styles.container}>
-      <Image
-        source={require("../assets/images/logo-icon.png")}
-        style={styles.logo}
+      <Image 
+        source={require('@/assets/logo.png')} 
+        style={styles.logo} 
         resizeMode="contain"
       />
     </View>

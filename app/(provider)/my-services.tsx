@@ -6,6 +6,7 @@ import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getProviderData, ProviderData } from "@/lib/database";
+import { strings } from "@/constants/localization";
 
 export default function MyServices() {
   const { user } = useAuthStore();
@@ -63,7 +64,7 @@ export default function MyServices() {
               <Text style={{ fontSize: 24 }}>🛠️</Text>
             </View>
             <View style={styles.serviceInfo}>
-              <Text style={styles.serviceName}>{item}</Text>
+              <Text style={styles.serviceName}>{strings.categories[item as keyof typeof strings.categories] || item}</Text>
               <Text style={styles.servicePrice}>R$ {provider?.basePrice || 0} / base</Text>
             </View>
             <TouchableOpacity 

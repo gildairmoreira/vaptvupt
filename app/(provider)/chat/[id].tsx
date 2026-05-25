@@ -13,6 +13,7 @@ import {
   Platform,
   ActivityIndicator,
   Image,
+  ScrollView,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -30,11 +31,23 @@ import {
 } from "@/lib/database";
 
 export default function ProviderChatScreen() {
-  const { id: requestId, pid: clientId } = useLocalSearchParams<{
+  const { id: requestId, cid: clientId } = useLocalSearchParams<{
     id: string;
-    pid: string;
+    cid: string;
   }>();
   const { user } = useAuthStore();
+
+  const QUICK_REPLIES = [
+    "Estou a caminho!",
+    "Chego em 5 minutos.",
+    "Pode me confirmar o endereço?",
+    "Pode mandar uma foto do problema?",
+    "Já estou no local."
+  ];
+
+  const handleQuickReply = (text: string) => {
+    setInputText(text);
+  };
 
   const [chatId, setChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -247,6 +260,17 @@ export default function ProviderChatScreen() {
         }}
       />
 
+      {/* QUICK REPLIES */}
+      <View style={{ backgroundColor: colors.baseSurface }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickRepliesContent}>
+          {QUICK_REPLIES.map(reply => (
+            <TouchableOpacity key={reply} style={styles.quickReplyChip} onPress={() => handleQuickReply(reply)}>
+              <Text style={styles.quickReplyText}>{reply}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
       {/* INPUT */}
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <View style={styles.inputBar}>
@@ -327,21 +351,22 @@ const styles = StyleSheet.create({
   messageMetaOther: { justifyContent: "flex-start" },
   messageTime: { fontFamily: typography.body, fontSize: typography.sizes.caption, color: colors.onSurfaceMuted },
   inputBar: {
-    flexDirection: "row", alignItems: "flex-end",
-    paddingHorizontal: spacing.base, paddingVertical: spacing.sm,
-    paddingBottom: Platform.OS === "ios" ? spacing.md : spacing.sm,
-    backgroundColor: colors.surfaceLowest, gap: spacing.sm, borderTopWidth: 0, ...shadows.card,
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: spacing.base, paddingVertical: spacing.md,
+    backgroundColor: colors.surfaceLowest, gap: spacing.sm, ...shadows.up,
   },
   textInput: {
-    flex: 1, backgroundColor: colors.surfaceHigh, borderRadius: radius.xl,
-    paddingHorizontal: spacing.base, paddingVertical: spacing.sm, paddingTop: spacing.sm,
-    fontFamily: typography.body, fontSize: typography.sizes.bodyMd, color: colors.onSurface,
-    maxHeight: 120, minHeight: 44,
+    flex: 1, backgroundColor: colors.surfaceHigh, borderRadius: radius.full,
+    paddingHorizontal: spacing.lg, paddingVertical: Platform.OS === "ios" ? 12 : 8,
+    fontFamily: typography.body, fontSize: 16, color: colors.onSurface,
+    maxHeight: 100, minHeight: 44,
   },
   sendBtn: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: colors.primaryContainer, justifyContent: "center",
-    alignItems: "center", ...shadows.float,
+    backgroundColor: colors.primaryContainer, justifyContent: "center", alignItems: "center",
   },
-  sendBtnDisabled: { opacity: 0.4 },
+  sendBtnDisabled: { backgroundColor: colors.surfaceHigh, opacity: 0.5 },
+  quickRepliesContent: { paddingHorizontal: spacing.base, paddingVertical: spacing.sm },
+  quickReplyChip: { backgroundColor: colors.surfaceLowest, paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.full, borderWidth: 1, borderColor: colors.surfaceBorder, marginRight: spacing.sm },
+  quickReplyText: { fontFamily: typography.body, fontSize: 14, color: colors.onSurface },
 });
