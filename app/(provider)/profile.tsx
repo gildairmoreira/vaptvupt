@@ -61,7 +61,7 @@ export default function ProviderProfile() {
             <Text style={styles.menuLabel}>Criar Anúncio de Serviço</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem} onPress={() => {}}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push("/(provider)/help" as never)}>
             <Text style={styles.menuEmoji}>❓</Text>
             <Text style={styles.menuLabel}>{strings.profile.help}</Text>
             <Text style={styles.menuArrow}>›</Text>

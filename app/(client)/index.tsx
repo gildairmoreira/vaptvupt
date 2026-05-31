@@ -15,6 +15,8 @@ import { subscribeAvailableProviders, ProviderData } from "@/lib/database";
 
 import BottomSheet, { BottomSheetScrollView, BottomSheetView } from "@gorhom/bottom-sheet";
 
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
 const ALL_CATEGORIES = [
   { key: "plumbing", label: "Encanador", iconName: "tool" },
   { key: "electrical", label: "Eletricista", iconName: "zap" },
@@ -451,7 +453,7 @@ export default function ClientHome() {
           {/* Grid de Categorias Completa */}
           <View style={styles.categoriesGrid}>
             {ALL_CATEGORIES.map(cat => (
-               <TouchableOpacity key={cat.key} style={styles.categoryItem} onPress={() => router.push(`/(client)/map?q=${cat.label}`)} activeOpacity={0.7}>
+               <TouchableOpacity key={cat.key} style={styles.categoryItem} onPress={() => router.push(`/(client)/map?q=${cat.key}`)} activeOpacity={0.7}>
                  <View style={styles.categoryIconWrap}>
                    <Feather name={cat.iconName} size={26} color={colors.onSurface} />
                  </View>

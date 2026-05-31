@@ -195,7 +195,7 @@ export default function Profile() {
           <MenuItem
             iconName="help-circle"
             label={strings.profile.help}
-            onPress={() => {}}
+            onPress={() => router.push("/(client)/help" as never)}
           />
           <MenuItem
             iconName="cloud"

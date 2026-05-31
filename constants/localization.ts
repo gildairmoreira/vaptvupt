@@ -174,7 +174,7 @@ export const strings = {
   // AVALIAÇÃO
   // ========================
   rate: {
-    title: "Rate Service",
+    title: "Avaliar Serviço",
     question: "Como foi o serviço?",
     tap: "Toque para avaliar",
     feedback: "Seu feedback (opcional)",
@@ -272,3 +272,23 @@ export const strings = {
 
 // Tipo exportado para uso com autocompletar TypeScript
 export type Strings = typeof strings;
+
+/**
+ * Traduz a key da categoria (em inglês, salva no banco) para o label em PT-BR.
+ * Usado em todas as telas que exibem serviceType ou categories.
+ */
+export const translateCategory = (key: string): string => {
+  const map: Record<string, string> = {
+    plumbing: strings.categories.plumbing,
+    electrical: strings.categories.electrical,
+    painting: strings.categories.painting,
+    cleaning: strings.categories.cleaning,
+    assembly: strings.categories.assembly,
+    carpentry: strings.categories.carpentry,
+    aircon: strings.categories.aircon,
+    moving: strings.categories.moving,
+    gardening: strings.categories.gardening,
+    other: strings.categories.other,
+  };
+  return map[key] || key;
+};

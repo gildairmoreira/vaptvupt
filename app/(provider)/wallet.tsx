@@ -1,13 +1,22 @@
 // Carteira do Prestador — VaptVupt (v1 — layout base)
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
 import { strings } from "@/constants/localization";
 import { useProviderStore } from "@/store/useProviderStore";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function Wallet() {
-  const { todayEarnings } = useProviderStore();
+  const { balance, loadBalance } = useProviderStore();
+  const { user } = useAuthStore();
+
+  // Carrega saldo real do banco ao abrir a carteira
+  useEffect(() => {
+    if (user?.uid) {
+      loadBalance(user.uid);
+    }
+  }, [user?.uid]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -17,7 +26,7 @@ export default function Wallet() {
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>{strings.wallet.balance}</Text>
         <Text style={styles.balanceValue}>
-          R$ {todayEarnings.toFixed(2).replace(".", ",")}
+          R$ {balance.toFixed(2).replace(".", ",")}
         </Text>
         <TouchableOpacity style={styles.withdrawBtn}>
           <Text style={styles.withdrawBtnText}>{strings.wallet.withdraw}</Text>

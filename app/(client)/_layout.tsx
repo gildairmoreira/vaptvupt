@@ -87,6 +87,7 @@ export default function ClientLayout() {
         <Tabs.Screen name="request/[id]" options={{ href: null }} />
         <Tabs.Screen name="rate/[id]" options={{ href: null }} />
         <Tabs.Screen name="chat/[id]" options={{ href: null }} />
+        <Tabs.Screen name="help" options={{ href: null }} />
       </Tabs>
       <ActiveRequestBanner />
     </>

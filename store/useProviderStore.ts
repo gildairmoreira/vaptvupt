@@ -7,6 +7,8 @@ import {
   subscribePendingRequests,
   updateRequestStatus,
   ServiceRequest,
+  getProvider,
+  getProviderBalance,
 } from "@/lib/database";
 
 interface ProviderState {
@@ -23,12 +25,15 @@ interface ProviderState {
 
   // Ações
   toggleAvailability: (uid: string) => Promise<void>;
+  loadAvailability: (uid: string) => Promise<void>;
+  loadBalance: (uid: string) => Promise<void>;
   acceptRequest: (requestId: string, providerId: string) => Promise<void>;
   declineRequest: (requestId: string) => Promise<void>;
   startListening: () => () => void;
   setMetrics: (earnings: number, services: number, rating: number) => void;
   clearError: () => void;
   addBalance: (amount: number) => void;
+  incrementServices: () => void;
   clearActiveRequest: () => void;
 }
 
@@ -43,7 +48,33 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   isLoading: false,
   error: null,
 
-  // Alterna disponibilidade e sincroniza com Firestore
+  // Carrega disponibilidade real do Supabase ao montar a tela
+  loadAvailability: async (uid) => {
+    try {
+      const provider = await getProvider(uid);
+      if (provider) {
+        set({
+          isAvailable: provider.available,
+          avgRating: provider.rating,
+          balance: provider.balance || 0,
+        });
+      }
+    } catch {
+      console.error("Erro ao carregar disponibilidade do Supabase");
+    }
+  },
+
+  // Carrega saldo do banco de dados
+  loadBalance: async (uid) => {
+    try {
+      const balance = await getProviderBalance(uid);
+      set({ balance });
+    } catch {
+      console.error("Erro ao carregar saldo do Supabase");
+    }
+  },
+
+  // Alterna disponibilidade e sincroniza com Supabase
   toggleAvailability: async (uid) => {
     const { isAvailable } = get();
     const newStatus = !isAvailable;
@@ -105,6 +136,10 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
 
   addBalance: (amount) => {
     set((state) => ({ balance: state.balance + amount }));
+  },
+
+  incrementServices: () => {
+    set((state) => ({ todayServices: state.todayServices + 1 }));
   },
 
   clearActiveRequest: () => set({ activeRequestId: null }),

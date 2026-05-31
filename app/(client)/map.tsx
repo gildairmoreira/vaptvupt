@@ -10,7 +10,7 @@ import { WebView } from "react-native-webview";
 import { Feather } from "@expo/vector-icons";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
-import { strings } from "@/constants/localization";
+import { strings, translateCategory } from "@/constants/localization";
 import { searchProviders, ProviderData } from "@/lib/database";
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
@@ -26,14 +26,28 @@ export default function SearchMap() {
   const [isLoading, setIsLoading] = useState(false);
   const { mapProvider } = useSettingsStore();
 
+  // Atualiza a busca se vier parâmetro na URL
   useEffect(() => {
-    const init = async () => {
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-      if (q) performSearch(q);
-    };
-    init();
+    if (q) {
+      setQuery(q);
+      performSearch(q);
+    }
   }, [q]);
+
+  // Carrega a localização do usuário apenas uma vez
+  useEffect(() => {
+    const loadLoc = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+      } catch (e) {
+        console.log('Erro ao buscar localização no mapa', e);
+      }
+    };
+    loadLoc();
+  }, []);
 
   const performSearch = async (text: string) => {
     if (!text.trim()) return;
@@ -332,7 +346,7 @@ export default function SearchMap() {
                 )}
                 <View style={styles.providerInfo}>
                   <Text style={styles.providerName}>{item.name}</Text>
-                  <Text style={styles.providerCategory}>{item.categories.join(", ")}</Text>
+                  <Text style={styles.providerCategory}>{item.categories.map(c => translateCategory(c)).join(", ")}</Text>
                   <View style={styles.providerMeta}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
                       <Feather name="star" size={11} color={colors.onSurface} />

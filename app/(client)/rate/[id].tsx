@@ -13,10 +13,10 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
-import { strings } from "@/constants/localization";
+import { strings, translateCategory } from "@/constants/localization";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useProviderStore } from "@/store/useProviderStore";
-import { saveReview, getProvider, ProviderData, getRequest, ServiceRequest } from "@/lib/database";
+import { saveReview, getProvider, ProviderData, getRequest, ServiceRequest, addProviderBalance } from "@/lib/database";
 import { Feather } from "@expo/vector-icons";
 
 export default function RateService() {
@@ -51,11 +51,13 @@ export default function RateService() {
   const handlePayment = () => {
     setIsLoading(true);
     // Simula delay de pagamento
-    setTimeout(() => {
-      // Repassa 95% para o saldo do prestador no store!
+    setTimeout(async () => {
+      // Repassa 95% para o saldo do prestador no banco
       const price = requestData?.estimatedPrice || 100;
       const providerCut = price * 0.95;
-      addBalance(providerCut);
+      if (requestData?.providerId) {
+        await addProviderBalance(requestData.providerId, providerCut);
+      }
       
       setIsLoading(false);
       setStep("rating");
@@ -208,7 +210,7 @@ export default function RateService() {
           </View>
           <Text style={styles.providerName}>{provider?.name || "Ricardo Mendonça"}</Text>
           <Text style={styles.providerCategory}>
-            {provider?.categories?.[0] || "Especialista em Logística"}
+            {provider?.categories?.[0] ? translateCategory(provider.categories[0]) : "Especialista"}
           </Text>
         </View>
 

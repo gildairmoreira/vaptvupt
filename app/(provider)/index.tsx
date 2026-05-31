@@ -17,7 +17,7 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
-import { strings } from "@/constants/localization";
+import { strings, translateCategory } from "@/constants/localization";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useProviderStore } from "@/store/useProviderStore";
 import { ServiceRequest } from "@/lib/database";
@@ -33,15 +33,19 @@ export default function ProviderDashboard() {
     isLoading,
     toggleAvailability,
     startListening,
+    loadAvailability,
   } = useProviderStore();
 
   const [refreshing, setRefreshing] = useState(false);
 
-  // Inicia listener de solicitações pendentes
+  // Carrega estado real do Supabase e inicia listener de solicitações
   useEffect(() => {
+    if (user?.uid) {
+      loadAvailability(user.uid);
+    }
     const unsubscribe = startListening();
     return unsubscribe;
-  }, []);
+  }, [user?.uid]);
 
   const handleToggle = async () => {
     if (!user?.uid) return;
@@ -243,7 +247,7 @@ function RequestCard({
       </View>
 
       {/* Info do serviço */}
-      <Text style={styles.requestService}>{request.serviceType}</Text>
+      <Text style={styles.requestService}>{translateCategory(request.serviceType)}</Text>
       <Text style={styles.requestDesc} numberOfLines={2}>{request.description}</Text>
 
       {/* Rodapé com valor e CTA */}

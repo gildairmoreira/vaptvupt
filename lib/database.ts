@@ -12,6 +12,7 @@ export interface ProviderData {
   photoUrl?: string;
   verified: boolean;
   bio?: string;
+  balance: number;
 }
 
 export interface UserData {
@@ -161,7 +162,8 @@ export const subscribeAvailableProviders = (callback: (providers: ProviderData[]
         rating: p.rating,
         reviewCount: p.review_count,
         verified: p.verified,
-        bio: p.bio
+        bio: p.bio,
+        balance: p.balance || 0
       })));
     }
   };
@@ -179,6 +181,8 @@ export const searchProviders = async (query: string): Promise<ProviderData[]> =>
   if (!data) return [];
   
   const q = query.toLowerCase();
+
+  // Mapa de termos em PT-BR para keys internas em inglês
   const categoryMap: Record<string, string> = {
     'encanador': 'plumbing', 'encanamento': 'plumbing',
     'eletricista': 'electrical', 'elétrica': 'electrical', 'eletrica': 'electrical',
@@ -186,9 +190,14 @@ export const searchProviders = async (query: string): Promise<ProviderData[]> =>
     'montagem': 'assembly', 'montador': 'assembly',
     'pintura': 'painting', 'pintor': 'painting',
     'jardinagem': 'gardening', 'jardineiro': 'gardening', 'jardineira': 'gardening', 'jardim': 'gardening',
-    'ar-condicionado': 'aircon', 'ar condicionado': 'aircon', 'ar-cond.': 'aircon',
+    'ar-condicionado': 'aircon', 'ar condicionado': 'aircon', 'ar-cond.': 'aircon', 'ar cond': 'aircon',
+    'marcenaria': 'carpentry', 'marceneiro': 'carpentry',
+    'mudança': 'moving', 'mudanca': 'moving',
     'outros': 'other', 'outro': 'other',
   };
+
+  // Lista de keys válidas de categorias (para filtro direto por key)
+  const validKeys = ['plumbing', 'electrical', 'cleaning', 'assembly', 'painting', 'gardening', 'aircon', 'carpentry', 'moving', 'other'];
 
   const providers = data.map(p => ({
     uid: p.id,
@@ -201,14 +210,20 @@ export const searchProviders = async (query: string): Promise<ProviderData[]> =>
     rating: p.rating,
     reviewCount: p.review_count,
     verified: p.verified,
-    bio: p.bio
+    bio: p.bio,
+    balance: p.balance || 0
   }));
 
   return providers.filter(p => {
+    // Busca por nome do prestador
     if (p.name.toLowerCase().includes(q)) return true;
+    // Se a query é diretamente uma key válida (ex: "plumbing")
+    if (validKeys.includes(q) && p.categories.includes(q)) return true;
+    // Mapeamento de PT-BR para key inglesa
     const mappedCat = categoryMap[q];
     if (mappedCat && p.categories.includes(mappedCat)) return true;
-    if (p.categories.some(c => c.includes(q))) return true;
+    // Busca parcial nas categorias
+    if (p.categories.some((c: string) => c.includes(q))) return true;
     return false;
   });
 };
@@ -220,7 +235,8 @@ export const getProvider = async (id: string): Promise<ProviderData | null> => {
     uid: data.id, name: data.users.name, photoUrl: data.users.photo_url,
     categories: data.categories, location: data.latitude && data.longitude ? { latitude: data.latitude, longitude: data.longitude } : null,
     basePrice: data.base_price, available: data.available, rating: data.rating,
-    reviewCount: data.review_count, verified: data.verified, bio: data.bio
+    reviewCount: data.review_count, verified: data.verified, bio: data.bio,
+    balance: data.balance || 0
   };
 };
 
@@ -262,12 +278,13 @@ export const getProviderReviews = async (id: string): Promise<Review[]> => {
   }));
 };
 
-export const saveReview = async (providerId: string, clientId: string, rating: number, comment: string) => {
+export const saveReview = async (reviewData: { requestId: string; clientId: string; providerId: string; rating: number; comment?: string }) => {
   const { error } = await supabase.from('reviews').insert({
-    provider_id: providerId,
-    client_id: clientId,
-    rating,
-    comment
+    "requestId": reviewData.requestId,
+    "providerId": reviewData.providerId,
+    "clientId": reviewData.clientId,
+    rating: reviewData.rating,
+    comment: reviewData.comment || null
   });
   if (error) throw new Error(error.message);
 };
@@ -361,6 +378,28 @@ export const getProviderRequests = async (uid: string) => {
     location: { latitude: d.latitude, longitude: d.longitude }, description: d.description, isUrgent: d.is_urgent,
     estimatedPrice: d.estimated_price, createdAt: d.created_at
   }));
+};
+
+// Alias para getClientHistory (usado no histórico do cliente)
+export const getClientHistory = getUserRequests;
+
+// ========================
+// SALDO DO PRESTADOR
+// ========================
+
+// Adiciona valor ao saldo do prestador no banco
+export const addProviderBalance = async (uid: string, amount: number): Promise<void> => {
+  // Busca saldo atual
+  const { data } = await supabase.from('providers').select('balance').eq('id', uid).single();
+  const currentBalance = data?.balance || 0;
+  const newBalance = currentBalance + amount;
+  await supabase.from('providers').update({ balance: newBalance }).eq('id', uid);
+};
+
+// Busca saldo do prestador
+export const getProviderBalance = async (uid: string): Promise<number> => {
+  const { data } = await supabase.from('providers').select('balance').eq('id', uid).single();
+  return data?.balance || 0;
 };
 
 // ========================

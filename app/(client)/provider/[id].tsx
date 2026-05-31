@@ -7,7 +7,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
-import { strings } from "@/constants/localization";
+import { strings, translateCategory } from "@/constants/localization";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRequestStore } from "@/store/useRequestStore";
 import { getProvider, getProviderReviews, ProviderData, Review } from "@/lib/database";
@@ -143,7 +143,7 @@ export default function ProviderDetail() {
         {/* Chips de categoria */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesRow}>
           {provider.categories.map((c) => (
-            <View key={c} style={styles.catChip}><Text style={styles.catChipText}>{c}</Text></View>
+            <View key={c} style={styles.catChip}><Text style={styles.catChipText}>{translateCategory(c)}</Text></View>
           ))}
         </ScrollView>
 

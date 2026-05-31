@@ -8,7 +8,7 @@ import * as Location from "expo-location";
 import * as Clipboard from "expo-clipboard";
 import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
-import { strings } from "@/constants/localization";
+import { strings, translateCategory } from "@/constants/localization";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { useProviderStore } from "@/store/useProviderStore";
@@ -57,11 +57,14 @@ export default function ProviderRequestDetail() {
   };
 
   const handleComplete = async () => {
-    if (!id) return;
-    // O prestador marca como concluído. O mock update fará o status ir pra 'completed'.
-    // O cliente vai pagar e o providerStore será atualizado no lado do cliente.
+    if (!id || !user) return;
+    // Marca como concluído no banco
     await updateRequestStatus(id, 'completed');
+    // Atualiza métricas locais do prestador
+    useProviderStore.getState().incrementServices();
     useProviderStore.getState().clearActiveRequest();
+    // Recarrega saldo real do banco (será atualizado quando o cliente pagar)
+    useProviderStore.getState().loadBalance(user.uid);
     Alert.alert("Sucesso!", "Serviço concluído. Aguardando pagamento e avaliação do cliente.");
     router.replace("/(provider)");
   };
@@ -279,7 +282,7 @@ export default function ProviderRequestDetail() {
 
       <View style={styles.detailsCard}>
         <View style={styles.serviceInfo}>
-          <Text style={styles.serviceType}>{request.serviceType}</Text>
+          <Text style={styles.serviceType}>{translateCategory(request.serviceType)}</Text>
           {request.isUrgent && (
             <View style={styles.urgentBadge}>
               <Text style={styles.urgentText}>⚡ URGENTE</Text>

@@ -6,8 +6,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
 import { strings } from "@/constants/localization";
 import { useAuthStore } from "@/store/useAuthStore";
-import { getClientHistory, ServiceRequest } from "@/lib/database";
+import { getUserRequests, ServiceRequest } from "@/lib/database";
 import { Feather } from "@expo/vector-icons";
+import { translateCategory } from "@/constants/localization";
 
 const STATUS_MAP: Record<ServiceRequest["status"], string> = {
   pending: "Pendente",
@@ -26,7 +27,7 @@ export default function History() {
   useEffect(() => {
     const load = async () => {
       if (!user?.uid) return;
-      const data = await getClientHistory(user.uid);
+      const data = await getUserRequests(user.uid);
       setHistory(data);
       setIsLoading(false);
     };
@@ -46,7 +47,7 @@ export default function History() {
         onPress={() => isActive ? router.push(`/(client)/request/${item.id}`) : null}
       >
         <View style={styles.cardHeader}>
-          <Text style={styles.cardService}>{item.serviceType}</Text>
+          <Text style={styles.cardService}>{translateCategory(item.serviceType)}</Text>
           <View style={[styles.statusBadge, isActive && styles.statusBadgeActive]}>
             <Text style={[styles.statusText, isActive && styles.statusTextActive]}>
               {isActive ? "Em Andamento" : "Concluído"}
@@ -55,7 +56,7 @@ export default function History() {
         </View>
         <Text style={styles.cardDesc} numberOfLines={1}>{item.description}</Text>
         <View style={styles.cardFooter}>
-          <Text style={styles.cardDate}>{item.createdAt instanceof Date ? item.createdAt.toLocaleDateString() : "Hoje"}</Text>
+          <Text style={styles.cardDate}>{item.createdAt ? new Date(item.createdAt).toLocaleDateString('pt-BR') : "Hoje"}</Text>
           <Text style={styles.cardPrice}>R$ {item.estimatedPrice || "0,00"}</Text>
         </View>
       </TouchableOpacity>

@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   inputBar: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: spacing.base, paddingVertical: spacing.md,
-    backgroundColor: colors.surfaceLowest, gap: spacing.sm, ...shadows.up,
+    backgroundColor: colors.surfaceLowest, gap: spacing.sm, ...shadows.card,
   },
   textInput: {
     flex: 1, backgroundColor: colors.surfaceHigh, borderRadius: radius.full,
@@ -367,6 +367,6 @@ const styles = StyleSheet.create({
   },
   sendBtnDisabled: { backgroundColor: colors.surfaceHigh, opacity: 0.5 },
   quickRepliesContent: { paddingHorizontal: spacing.base, paddingVertical: spacing.sm },
-  quickReplyChip: { backgroundColor: colors.surfaceLowest, paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.full, borderWidth: 1, borderColor: colors.surfaceBorder, marginRight: spacing.sm },
+  quickReplyChip: { backgroundColor: colors.surfaceLowest, paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.full, borderWidth: 1, borderColor: colors.surfaceHigh, marginRight: spacing.sm },
   quickReplyText: { fontFamily: typography.body, fontSize: 14, color: colors.onSurface },
 });

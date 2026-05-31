@@ -77,6 +77,7 @@ export default function ProviderLayout() {
       <Tabs.Screen name="my-services" options={{ href: null }} />
       <Tabs.Screen name="edit-service/[id]" options={{ href: null }} />
       <Tabs.Screen name="chat/[id]" options={{ href: null }} />
+      <Tabs.Screen name="help" options={{ href: null }} />
     </Tabs>
     <ActiveRequestBanner />
     </>
