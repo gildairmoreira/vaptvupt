@@ -14,6 +14,11 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://fmcizlpykhmmzckhakel.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_-ELkEIBrNyg8_hZlNfs2Hw_BcXHQ8qb",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyCVp6JxHUVJKYJE0QqTKvwSXhSrh_EXZ80"
       }
     },
     "production": {}
