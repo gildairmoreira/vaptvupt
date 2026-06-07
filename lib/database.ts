@@ -133,29 +133,113 @@ export const updateUser = async (uid: string, data: any) => {
 // ========================
 
 export const createService = async (data: any) => {
+  // Insere anúncio individual na tabela provider_services
+  const { error: svcError } = await supabase.from('provider_services').insert({
+    providerId: data.provider_id,
+    title: data.title,
+    description: data.description,
+    category: data.category,
+    price: data.base_price || 0,
+  });
+  if (svcError) {
+    // Loga erro mas não bloqueia — fallback para atualizar só o providers
+    console.error('Erro ao inserir em provider_services:', svcError.message);
+  }
+
+  // Atualiza a tabela providers com a nova categoria e dados base
   const { data: prov } = await supabase.from('providers').select('categories').eq('id', data.provider_id).single();
   if (prov) {
-    const categories = Array.from(new Set([...prov.categories, data.category]));
-    await supabase.from('providers').update({
+    // Garante que categories nunca seja null antes do spread
+    const existingCategories = Array.isArray(prov.categories) ? prov.categories : [];
+    const categories = Array.from(new Set([...existingCategories, data.category]));
+    const { error: updateError } = await supabase.from('providers').update({
       categories,
-      base_price: data.base_price,
+      base_price: data.base_price || 0,
       latitude: data.location?.latitude,
       longitude: data.location?.longitude,
       bio: data.description,
       available: true
     }).eq('id', data.provider_id);
+    if (updateError) {
+      console.error('Erro ao atualizar provider:', updateError.message);
+    }
   }
 };
 
-export const subscribeAvailableProviders = (callback: (providers: ProviderData[]) => void) => {
+// Interface para bounds geográficos usados na busca por área
+export interface GeoBounds {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+}
+
+// Calcula bounding box a partir de um ponto central e raio em km
+export const calculateBounds = (latitude: number, longitude: number, radiusKm: number): GeoBounds => {
+  // 1 grau de latitude ≈ 111km
+  const latDelta = radiusKm / 111;
+  // 1 grau de longitude varia com a latitude
+  const lngDelta = radiusKm / (111 * Math.cos((latitude * Math.PI) / 180));
+  return {
+    minLat: latitude - latDelta,
+    maxLat: latitude + latDelta,
+    minLng: longitude - lngDelta,
+    maxLng: longitude + lngDelta,
+  };
+};
+
+// Busca providers dentro de uma área geográfica (bounding box)
+export const fetchProvidersByArea = async (bounds: GeoBounds): Promise<ProviderData[]> => {
+  const { data } = await supabase
+    .from('providers')
+    .select('*, users!inner(name, photo_url)')
+    .eq('available', true)
+    .gte('latitude', bounds.minLat)
+    .lte('latitude', bounds.maxLat)
+    .gte('longitude', bounds.minLng)
+    .lte('longitude', bounds.maxLng);
+
+  if (!data) return [];
+  return data.map(p => ({
+    uid: p.id,
+    name: p.users.name,
+    photoUrl: p.users.photo_url,
+    categories: Array.isArray(p.categories) ? p.categories : [],
+    location: p.latitude && p.longitude ? { latitude: p.latitude, longitude: p.longitude } : null,
+    basePrice: p.base_price,
+    available: p.available,
+    rating: p.rating,
+    reviewCount: p.review_count,
+    verified: p.verified,
+    bio: p.bio,
+    balance: p.balance || 0,
+  }));
+};
+
+// Subscreve providers com suporte a área geográfica e retorna unsubscribe + refetch
+export const subscribeAvailableProviders = (
+  callback: (providers: ProviderData[]) => void,
+  bounds?: GeoBounds | null
+) => {
   const fetchProviders = async () => {
-    const { data } = await supabase.from('providers').select('*, users!inner(name, photo_url)').eq('available', true);
+    let query = supabase.from('providers').select('*, users!inner(name, photo_url)').eq('available', true);
+
+    // Aplica filtro geográfico se bounds fornecidos
+    if (bounds) {
+      query = query
+        .gte('latitude', bounds.minLat)
+        .lte('latitude', bounds.maxLat)
+        .gte('longitude', bounds.minLng)
+        .lte('longitude', bounds.maxLng);
+    }
+
+    const { data } = await query;
     if (data) {
       callback(data.map(p => ({
         uid: p.id,
         name: p.users.name,
         photoUrl: p.users.photo_url,
-        categories: p.categories,
+        categories: Array.isArray(p.categories) ? p.categories : [],
         location: p.latitude && p.longitude ? { latitude: p.latitude, longitude: p.longitude } : null,
         basePrice: p.base_price,
         available: p.available,
@@ -173,7 +257,11 @@ export const subscribeAvailableProviders = (callback: (providers: ProviderData[]
     .on('postgres_changes', { event: '*', schema: 'public', table: 'providers' }, fetchProviders)
     .subscribe();
 
-  return () => { supabase.removeChannel(sub); };
+  // Retorna objeto com unsubscribe e refetch para uso externo
+  return {
+    unsubscribe: () => { supabase.removeChannel(sub); },
+    refetch: fetchProviders,
+  };
 };
 
 export const searchProviders = async (query: string): Promise<ProviderData[]> => {

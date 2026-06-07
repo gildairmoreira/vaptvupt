@@ -144,3 +144,12 @@ constants/
 - [ ] Geoapify Isoline para busca por raio preciso
 - [ ] Histórico de ganhos do prestador
 - [ ] Chat no painel do prestador
+
+---
+
+## 📸 Screenshots
+
+- **Início:** ![Início](assets/screenshots/inicio.jpeg)
+- **Categorias:** ![Categorias](assets/screenshots/categorias.jpeg)
+- **Histórico:** ![Histórico](assets/screenshots/historico.jpeg)
+- **Perfil:** ![Perfil](assets/screenshots/perfil.jpeg)

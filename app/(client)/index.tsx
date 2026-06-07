@@ -1,5 +1,5 @@
 // Home do Cliente — VaptVupt
-// Mapa Google Maps + categorias + card de prestador selecionado
+// Mapa com markers dinâmicos em tempo real + busca por área geográfica
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Animated, PanResponder } from "react-native";
@@ -11,11 +11,20 @@ import { Feather } from "@expo/vector-icons";
 import { colors, typography, spacing, radius, shadows } from "@/constants/theme";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { useAuthStore } from "@/store/useAuthStore";
-import { subscribeAvailableProviders, ProviderData } from "@/lib/database";
+import {
+  subscribeAvailableProviders,
+  fetchProvidersByArea,
+  calculateBounds,
+  ProviderData,
+  GeoBounds,
+} from "@/lib/database";
 
-import BottomSheet, { BottomSheetScrollView, BottomSheetView } from "@gorhom/bottom-sheet";
+import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
+// Raio padrão em km para carregamento inicial (cobre a região/estado)
+const DEFAULT_RADIUS_KM = 150;
 
 const ALL_CATEGORIES = [
   { key: "plumbing", label: "Encanador", iconName: "tool" },
@@ -28,6 +37,18 @@ const ALL_CATEGORIES = [
   { key: "other", label: "Outros", iconName: "more-horizontal" },
 ] as const;
 
+// Ícones SVG por categoria para uso dentro do WebView
+const CATEGORY_ICONS_JSON: Record<string, string> = {
+  cleaning: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+  plumbing: '<svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+  electrical: '<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+  assembly: '<svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+  painting: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+  gardening: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+  aircon: '<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+};
+const DEFAULT_ICON_SVG = '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+
 export default function ClientHome() {
   const { user } = useAuthStore();
   const { mapProvider } = useSettingsStore();
@@ -35,11 +56,21 @@ export default function ClientHome() {
   const webviewRef = useRef<WebView>(null);
   const bottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = React.useMemo(() => ["35%", "90%"], []);
-  
+
   const [providers, setProviders] = useState<ProviderData[]>([]);
-  const [userLocation, setUserLocation] = useState<{ latitude: number, longitude: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<ProviderData | null>(null);
 
+  // Estado para controle de busca por área
+  const [mapCenter, setMapCenter] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [showSearchArea, setShowSearchArea] = useState(false);
+  const [isSearchingArea, setIsSearchingArea] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
+
+  // Referência para o subscription ativo
+  const subscriptionRef = useRef<{ unsubscribe: () => void; refetch: () => Promise<void> } | null>(null);
+
+  // Busca localização do usuário
   useEffect(() => {
     const requestLocation = async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -50,27 +81,140 @@ export default function ClientHome() {
     requestLocation();
   }, []);
 
+  // Subscreve providers da região do usuário
   useEffect(() => {
-    const unsubscribe = subscribeAvailableProviders((data) => {
+    // Calcula bounds da região se temos localização
+    const bounds = userLocation
+      ? calculateBounds(userLocation.latitude, userLocation.longitude, DEFAULT_RADIUS_KM)
+      : null;
+
+    const sub = subscribeAvailableProviders((data) => {
       setProviders(data);
-    });
-    return unsubscribe;
-  }, []);
+    }, bounds);
+
+    subscriptionRef.current = sub;
+
+    return () => {
+      sub.unsubscribe();
+    };
+  }, [userLocation]);
+
+  // Quando providers mudam, injeta markers no mapa dinamicamente
+  useEffect(() => {
+    if (!mapReady || !webviewRef.current) return;
+    injectMarkers(providers);
+  }, [providers, mapReady]);
 
   useFocusEffect(
     useCallback(() => {
       // Limpa o provedor selecionado sempre que a tela ganha foco
-      // Isso resolve o problema do popup continuar aberto ao voltar
       setSelectedProvider(null);
     }, [])
   );
 
-  const panX = useRef(new Animated.Value(0)).current;
+  // Injeta markers no WebView via JavaScript
+  const injectMarkers = (providersList: ProviderData[]) => {
+    if (!webviewRef.current) return;
+    const providersJson = JSON.stringify(providersList.filter(p => p.location));
+    const iconsJson = JSON.stringify(CATEGORY_ICONS_JSON);
+    const defaultIcon = JSON.stringify(DEFAULT_ICON_SVG);
 
+    const js = `
+      (function() {
+        try {
+          var providers = ${providersJson};
+          var categoryIcons = ${iconsJson};
+          var defaultIcon = ${defaultIcon};
+
+          // Limpa markers antigos
+          if (window._markers) {
+            window._markers.forEach(function(m) {
+              ${mapProvider === "osm" ? "m.remove();" : "m.setMap(null);"}
+            });
+          }
+          if (window._overlays) {
+            window._overlays.forEach(function(o) { o.setMap(null); });
+          }
+          window._markers = [];
+          window._overlays = [];
+
+          providers.forEach(function(p) {
+            p.categories.forEach(function(cat, index) {
+              var iconSvg = categoryIcons[cat] || defaultIcon;
+
+              var offsetLat = 0, offsetLng = 0;
+              if (index > 0) {
+                var angle = (index * (Math.PI * 2 / 6));
+                offsetLat = Math.sin(angle) * 0.0002;
+                offsetLng = Math.cos(angle) * 0.0002;
+              }
+
+              ${mapProvider === "osm" ? `
+              var marker = L.marker([p.location.latitude + offsetLat, p.location.longitude + offsetLng], {
+                icon: L.divIcon({
+                  className: '',
+                  html: '<div class="marker-badge">' + iconSvg + '</div>',
+                  iconSize: [32, 32],
+                  iconAnchor: [16, 32]
+                })
+              }).addTo(window.map);
+              marker.on('click', function() {
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SELECT_PROVIDER', payload: p }));
+              });
+              window._markers.push(marker);
+              ` : `
+              var latLng = new google.maps.LatLng(p.location.latitude + offsetLat, p.location.longitude + offsetLng);
+              var overlay = new google.maps.OverlayView();
+              overlay.onAdd = function() {
+                var div = document.createElement('div');
+                div.className = 'marker-badge';
+                div.innerHTML = iconSvg;
+                div.onclick = function() {
+                  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SELECT_PROVIDER', payload: p }));
+                };
+                this.div = div;
+                this.getPanes().overlayMouseTarget.appendChild(div);
+              };
+              overlay.draw = function() {
+                var point = this.getProjection().fromLatLngToDivPixel(latLng);
+                if (point) {
+                  this.div.style.position = 'absolute';
+                  this.div.style.left = (point.x - 16) + 'px';
+                  this.div.style.top = (point.y - 32) + 'px';
+                }
+              };
+              overlay.onRemove = function() { if (this.div) this.div.parentNode.removeChild(this.div); };
+              overlay.setMap(window.map);
+              window._overlays.push(overlay);
+              `}
+            });
+          });
+        } catch(e) { console.error('Erro ao injetar markers:', e); }
+        true;
+      })();
+    `;
+    webviewRef.current.injectJavaScript(js);
+  };
+
+  // Busca providers na área visível do mapa
+  const handleSearchArea = async () => {
+    if (!mapCenter) return;
+    setIsSearchingArea(true);
+    try {
+      // Calcula bounds para a área visível (raio de ~50km ao redor do centro)
+      const bounds = calculateBounds(mapCenter.latitude, mapCenter.longitude, 50);
+      const areaProviders = await fetchProvidersByArea(bounds);
+      setProviders(areaProviders);
+      setShowSearchArea(false);
+    } finally {
+      setIsSearchingArea(false);
+    }
+  };
+
+  const panX = useRef(new Animated.Value(0)).current;
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Ativar apenas se arrastar horizontalmente
         return Math.abs(gestureState.dx) > 10;
       },
       onPanResponderMove: Animated.event([null, { dx: panX }], { useNativeDriver: false }),
@@ -99,6 +243,25 @@ export default function ClientHome() {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'SELECT_PROVIDER') {
         setSelectedProvider(data.payload);
+      } else if (data.type === 'MAP_READY') {
+        // Mapa carregou — agora pode injetar markers
+        setMapReady(true);
+      } else if (data.type === 'MAP_MOVED') {
+        // Usuário arrastou o mapa — mostra botão de buscar nesta área
+        const newCenter = { latitude: data.latitude, longitude: data.longitude };
+        setMapCenter(newCenter);
+
+        // Só mostra botão se moveu significativamente (>5km do ponto original)
+        if (userLocation) {
+          const dist = getDistanceKm(userLocation.latitude, userLocation.longitude, newCenter.latitude, newCenter.longitude);
+          if (dist > 5) {
+            setShowSearchArea(true);
+          } else {
+            setShowSearchArea(false);
+          }
+        } else {
+          setShowSearchArea(true);
+        }
       }
     } catch (e) {
       console.error("Error parsing message from webview", e);
@@ -110,12 +273,14 @@ export default function ClientHome() {
   };
 
   const centerMap = () => {
-    const target = selectedProvider?.location || initialLocation;
+    const target = selectedProvider?.location || userLocation || bhCoords;
     if (target && webviewRef.current) {
       webviewRef.current.injectJavaScript(`
         if (window.map) {
-          window.map.panTo({ lat: ${target.latitude}, lng: ${target.longitude} });
-          window.map.setZoom(15);
+          ${mapProvider === "osm"
+            ? `window.map.setView([${target.latitude}, ${target.longitude}], 15);`
+            : `window.map.panTo({ lat: ${target.latitude}, lng: ${target.longitude} }); window.map.setZoom(15);`
+          }
         }
         true;
       `);
@@ -125,8 +290,8 @@ export default function ClientHome() {
   const bhCoords = { latitude: -19.9167, longitude: -43.9345 };
   const initialLocation = userLocation || bhCoords;
 
-  const generateOsmHtml = () => {
-    const providersJson = JSON.stringify(providers.filter(p => p.location));
+  // HTML base do mapa — SEM markers (os markers serão injetados dinamicamente)
+  const generateBaseOsmHtml = () => {
     return `
       <!DOCTYPE html>
       <html>
@@ -146,10 +311,10 @@ export default function ClientHome() {
               border: 2px solid ${colors.primaryContainer};
               transform: rotate(-45deg);
             }
-            .marker-badge svg { 
-              width: 18px; height: 18px; stroke: ${colors.primaryContainer}; 
-              stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; 
-              transform: rotate(45deg); 
+            .marker-badge svg {
+              width: 18px; height: 18px; stroke: ${colors.primaryContainer};
+              stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round;
+              transform: rotate(45deg);
             }
             .user-marker {
               width: 16px; height: 16px; background-color: #2196F3;
@@ -161,62 +326,36 @@ export default function ClientHome() {
         <body>
           <div id="map"></div>
           <script>
+            window._markers = [];
+            window._overlays = [];
             var map = L.map('map', { zoomControl: false }).setView([${initialLocation.latitude}, ${initialLocation.longitude}], 14);
+            window.map = map;
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
             L.marker([${initialLocation.latitude}, ${initialLocation.longitude}], {
               icon: L.divIcon({ className: '', html: '<div class="user-marker"></div>', iconSize: [22, 22] })
             }).addTo(map);
 
-            var providers = ${providersJson};
-            var categoryIcons = {
-              cleaning: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', 
-              plumbing: '<svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>', 
-              electrical: '<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
-              assembly: '<svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>', 
-              painting: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', 
-              gardening: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', 
-              aircon: '<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
-            };
-            var defaultIcon = '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-
-            providers.forEach(function(p) {
-              p.categories.forEach(function(cat, index) {
-                var iconSvg = categoryIcons[cat] || defaultIcon;
-                
-                var offsetLat = 0;
-                var offsetLng = 0;
-                if (index > 0) {
-                  // create a small circle offset around the original point
-                  var angle = (index * (Math.PI * 2 / 6)); 
-                  offsetLat = Math.sin(angle) * 0.0002;
-                  offsetLng = Math.cos(angle) * 0.0002;
-                }
-
-                var marker = L.marker([p.location.latitude + offsetLat, p.location.longitude + offsetLng], {
-                  icon: L.divIcon({
-                    className: '',
-                    html: '<div class="marker-badge">' + iconSvg + '</div>',
-                    iconSize: [32, 32],
-                    iconAnchor: [16, 32]
-                  })
-                }).addTo(map);
-                
-                marker.on('click', function() {
-                  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SELECT_PROVIDER', payload: p }));
-                });
-              });
+            // Detecta quando o usuário para de arrastar o mapa
+            map.on('moveend', function() {
+              var center = map.getCenter();
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'MAP_MOVED',
+                latitude: center.lat,
+                longitude: center.lng
+              }));
             });
+
+            // Sinaliza que o mapa está pronto
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MAP_READY' }));
           </script>
         </body>
       </html>
     `;
   };
 
-  const generateGoogleHtml = () => {
-    const providersJson = JSON.stringify(providers.filter(p => p.location));
+  const generateBaseGoogleHtml = () => {
     const center = initialLocation;
-
     return `
       <!DOCTYPE html>
       <html>
@@ -225,7 +364,6 @@ export default function ClientHome() {
           <style>
             body { margin: 0; padding: 0; }
             #map { width: 100vw; height: 100vh; }
-            
             .marker-badge {
               width: 36px; height: 36px; border-radius: 50% 50% 50% 0;
               background-color: ${colors.surfaceLowest};
@@ -235,10 +373,10 @@ export default function ClientHome() {
               transform: rotate(-45deg);
               cursor: pointer;
             }
-            .marker-badge svg { 
-              width: 18px; height: 18px; stroke: ${colors.primaryContainer}; 
-              stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; 
-              transform: rotate(45deg); 
+            .marker-badge svg {
+              width: 18px; height: 18px; stroke: ${colors.primaryContainer};
+              stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round;
+              transform: rotate(45deg);
             }
           </style>
         </head>
@@ -246,7 +384,9 @@ export default function ClientHome() {
           <div id="map"></div>
           <script>
             window.alert = function() {};
-            
+            window._markers = [];
+            window._overlays = [];
+
             function initMap() {
               window.map = new google.maps.Map(document.getElementById('map'), {
                 center: { lat: ${center.latitude}, lng: ${center.longitude} },
@@ -278,65 +418,18 @@ export default function ClientHome() {
                 zIndex: 999
               });
 
-              var categoryIcons = {
-                cleaning: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', 
-                plumbing: '<svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>', 
-                electrical: '<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
-                assembly: '<svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>', 
-                painting: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', 
-                gardening: '<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', 
-                aircon: '<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
-              };
-              var defaultIcon = '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-
-              providers.forEach(function(p) {
-                p.categories.forEach(function(cat, index) {
-                  var iconSvg = categoryIcons[cat] || defaultIcon;
-                  
-                  var offsetLat = 0;
-                  var offsetLng = 0;
-                  if (index > 0) {
-                    var angle = (index * (Math.PI * 2 / 6)); 
-                    offsetLat = Math.sin(angle) * 0.0002;
-                    offsetLng = Math.cos(angle) * 0.0002;
-                  }
-
-                  var latLng = new google.maps.LatLng(p.location.latitude + offsetLat, p.location.longitude + offsetLng);
-
-                  var marker = new google.maps.Marker({
-                    position: latLng,
-                    map: window.map,
-                    icon: {
-                      path: 'M0,0',
-                      scale: 0
-                    }
-                  });
-
-                  var overlay = new google.maps.OverlayView();
-                  overlay.onAdd = function() {
-                    var div = document.createElement('div');
-                    div.className = 'marker-badge';
-                    div.innerHTML = iconSvg;
-                    div.onclick = function() {
-                      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SELECT_PROVIDER', payload: p }));
-                    };
-                    this.div = div;
-                    this.getPanes().overlayMouseTarget.appendChild(div);
-                  };
-                  overlay.draw = function() {
-                    var point = this.getProjection().fromLatLngToDivPixel(latLng);
-                    if (point) {
-                      this.div.style.position = 'absolute';
-                      this.div.style.left = (point.x - 16) + 'px';
-                      this.div.style.top = (point.y - 32) + 'px';
-                    }
-                  };
-                  overlay.onRemove = function() {
-                    if (this.div) this.div.parentNode.removeChild(this.div);
-                  };
-                  overlay.setMap(window.map);
-                });
+              // Detecta quando o usuário para de arrastar o mapa
+              window.map.addListener('idle', function() {
+                var center = window.map.getCenter();
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                  type: 'MAP_MOVED',
+                  latitude: center.lat(),
+                  longitude: center.lng()
+                }));
               });
+
+              // Sinaliza que o mapa está pronto
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MAP_READY' }));
             }
           </script>
           <script src="https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initMap" async defer></script>
@@ -346,7 +439,7 @@ export default function ClientHome() {
   };
 
   const generateMapHtml = () => {
-    return mapProvider === "osm" ? generateOsmHtml() : generateGoogleHtml();
+    return mapProvider === "osm" ? generateBaseOsmHtml() : generateBaseGoogleHtml();
   };
 
   const firstName = user?.name?.split(" ")[0] || "você";
@@ -380,7 +473,21 @@ export default function ClientHome() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity 
+      {/* Botão "Buscar nesta área" — aparece quando o mapa é arrastado */}
+      {showSearchArea && (
+        <TouchableOpacity
+          style={[styles.searchAreaBtn, { top: Math.max(insets.top, 20) + 60 }]}
+          onPress={handleSearchArea}
+          activeOpacity={0.85}
+        >
+          <Feather name="refresh-cw" size={14} color={colors.onPrimary} />
+          <Text style={styles.searchAreaBtnText}>
+            {isSearchingArea ? "Buscando..." : "Buscar nesta área"}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      <TouchableOpacity
         style={[styles.locationBtn, { bottom: (selectedProvider ? 400 : 380) }]}
         onPress={centerMap}
       >
@@ -389,17 +496,17 @@ export default function ClientHome() {
 
       {/* Card de Prestador Selecionado */}
       {selectedProvider && (
-        <Animated.View 
+        <Animated.View
           style={[styles.selectedCard, { bottom: 350, transform: [{ translateX: panX }] }]}
           {...panResponder.panHandlers}
         >
-          <TouchableOpacity 
-            style={styles.closeCardBtn} 
+          <TouchableOpacity
+            style={styles.closeCardBtn}
             onPress={() => setSelectedProvider(null)}
           >
             <Feather name="x" size={20} color={colors.onSurfaceMuted} />
           </TouchableOpacity>
-          
+
           <View style={styles.providerRow}>
             {selectedProvider.photoUrl ? (
               <Image source={{ uri: selectedProvider.photoUrl }} style={styles.providerAvatarSmall} />
@@ -415,8 +522,8 @@ export default function ClientHome() {
               </Text>
             </View>
           </View>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.viewProfileBtn}
             onPress={() => router.push(`/(client)/provider/${selectedProvider.uid}`)}
           >
@@ -425,7 +532,7 @@ export default function ClientHome() {
         </Animated.View>
       )}
 
-      {/* BOTTOM SHEET OFICIAL */}
+      {/* BOTTOM SHEET */}
       <BottomSheet
         ref={bottomSheetRef}
         index={0}
@@ -434,12 +541,12 @@ export default function ClientHome() {
         handleIndicatorStyle={styles.dragIndicator}
         enableOverDrag={false}
       >
-        <BottomSheetScrollView 
+        <BottomSheetScrollView
           contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingBottom: insets.bottom + 20 }}
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.sheetTitle}>Do que você precisa?</Text>
-          
+
           <TouchableOpacity style={styles.searchBar} onPress={handleSearch} activeOpacity={0.85}>
             <View style={styles.searchIconBox}>
               <Feather name="search" size={16} color={colors.primaryContainer} />
@@ -450,7 +557,7 @@ export default function ClientHome() {
             </View>
           </TouchableOpacity>
 
-          {/* Grid de Categorias Completa */}
+          {/* Grid de Categorias */}
           <View style={styles.categoriesGrid}>
             {ALL_CATEGORIES.map(cat => (
                <TouchableOpacity key={cat.key} style={styles.categoryItem} onPress={() => router.push(`/(client)/map?q=${cat.key}`)} activeOpacity={0.7}>
@@ -462,15 +569,15 @@ export default function ClientHome() {
             ))}
           </View>
 
-          {/* Lista de Prestadores Próximos */}
+          {/* Lista de Prestadores Online */}
           <View style={styles.nearbySection}>
             <Text style={styles.sectionTitle}>Prestadores Online</Text>
             {providers.length === 0 ? (
               <Text style={styles.emptyText}>Nenhum prestador próximo a você no momento.</Text>
             ) : (
               providers.map((p) => (
-                <TouchableOpacity 
-                  key={p.uid} 
+                <TouchableOpacity
+                  key={p.uid}
                   style={styles.nearbyProviderCard}
                   onPress={() => router.push(`/(client)/provider/${p.uid}`)}
                   activeOpacity={0.7}
@@ -499,6 +606,15 @@ export default function ClientHome() {
   );
 }
 
+// Calcula distância simples entre 2 pontos (Haversine simplificado, em km)
+function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLng = (lng2 - lng1) * (Math.PI / 180);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.baseSurface },
   floatingHeader: { position: "absolute", left: spacing.xl, right: spacing.xl, flexDirection: "row", justifyContent: "space-between", alignItems: "center", zIndex: 10 },
@@ -509,7 +625,27 @@ const styles = StyleSheet.create({
   avatarPlaceholder: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primaryContainer, justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: colors.surfaceLowest },
   avatarInitial: { fontFamily: typography.bodyBold, fontSize: typography.sizes.titleSm, color: colors.onPrimary },
   locationBtn: { position: "absolute", right: spacing.xl, width: 48, height: 48, borderRadius: 24, backgroundColor: colors.surfaceLowest, justifyContent: "center", alignItems: "center", ...shadows.card, zIndex: 10 },
-  
+
+  // Botão "Buscar nesta área"
+  searchAreaBtn: {
+    position: "absolute",
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.primaryContainer,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: radius.full,
+    ...shadows.float,
+    zIndex: 20,
+  },
+  searchAreaBtnText: {
+    fontFamily: typography.bodyBold,
+    fontSize: typography.sizes.bodySm,
+    color: colors.onPrimary,
+  },
+
   selectedCard: { position: "absolute", left: spacing.xl, right: spacing.xl, backgroundColor: colors.surfaceLowest, borderRadius: radius.xl, padding: spacing.lg, ...shadows.float, zIndex: 11 },
   closeCardBtn: { position: "absolute", top: 12, right: 12, width: 32, height: 32, justifyContent: "center", alignItems: "center" },
   providerRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: spacing.lg },
@@ -527,7 +663,7 @@ const styles = StyleSheet.create({
   searchPlaceholder: { flex: 1, fontFamily: typography.bodyBold, fontSize: 15, color: colors.onSurfaceVariant },
   searchBtn: { backgroundColor: colors.surfaceLowest, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full, ...shadows.card },
   searchBtnText: { fontFamily: typography.label, fontSize: typography.sizes.bodySm, color: colors.onSurface },
-  
+
   categoriesGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: spacing.lg },
   categoryItem: { alignItems: "center", width: "23%", marginBottom: spacing.md },
   categoryIconWrap: { width: 60, height: 60, borderRadius: 30, backgroundColor: colors.surfaceLow, justifyContent: "center", alignItems: "center", marginBottom: spacing.xs },

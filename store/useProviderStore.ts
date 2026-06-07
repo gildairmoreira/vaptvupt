@@ -117,10 +117,10 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
 
   // Inicia listener de solicitações pendentes próximas
   startListening: () => {
-    const unsubscribe = subscribePendingRequests((requests) => {
+    const unsub = subscribePendingRequests((requests) => {
       set({ pendingRequests: requests });
     });
-    return unsubscribe;
+    return unsub;
   },
 
   // Atualiza métricas do dashboard
