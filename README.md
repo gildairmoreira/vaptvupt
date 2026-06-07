@@ -7,11 +7,13 @@
 ## 🚀 Setup Rápido
 
 ### 1. Instalar dependências
+
 ```bash
 npm install
 ```
 
 ### 2. Configurar variáveis de ambiente
+
 Edite o arquivo `.env` com suas chaves reais (já configurado com as chaves do projeto `vaptvupt-prod`):
 
 ```env
@@ -21,6 +23,7 @@ EXPO_PUBLIC_GEOAPIFY_API_KEY=...
 ```
 
 ### 3. Rodar localmente
+
 ```bash
 # Web (desenvolvimento)
 npx expo start --web
@@ -28,7 +31,7 @@ npx expo start --web
 # Android via Expo Go
 npx expo start --android
 
-# iOS via Expo Go  
+# iOS via Expo Go
 npx expo start --ios
 ```
 
@@ -37,6 +40,7 @@ npx expo start --ios
 ## 🔒 Deploy das Regras de Segurança Firebase
 
 ### Pré-requisitos
+
 ```bash
 npm install -g firebase-tools
 firebase login
@@ -44,6 +48,7 @@ firebase use vaptvupt-prod
 ```
 
 ### Deploy rules + indexes
+
 ```bash
 firebase deploy --only firestore:rules,firestore:indexes,storage
 ```
@@ -95,26 +100,26 @@ constants/
 
 ## 🎨 Design System — Kinetic Layer
 
-| Token | Valor |
-|---|---|
-| `primary` | `#d83900` (laranja) |
-| `secondary` | `#0058bc` (azul confiança) |
-| `surface` | `#f9f9f9` |
-| `radius.full` | 9999 (botões pill) |
-| Sem bordas 1px | Hierarquia por cor/sombra |
+| Token          | Valor                      |
+| -------------- | -------------------------- |
+| `primary`      | `#d83900` (laranja)        |
+| `secondary`    | `#0058bc` (azul confiança) |
+| `surface`      | `#f9f9f9`                  |
+| `radius.full`  | 9999 (botões pill)         |
+| Sem bordas 1px | Hierarquia por cor/sombra  |
 
 ---
 
 ## 📊 Coleções Firestore
 
-| Coleção | Descrição |
-|---|---|
-| `users` | Perfis de usuários (client\|provider) |
-| `providers` | Dados do prestador (disponibilidade, localização, rating) |
-| `service_requests` | Solicitações com status em tempo real |
-| `reviews` | Avaliações dos serviços |
-| `chats` | Conversas vinculadas a solicitações |
-| `chats/{id}/messages` | Mensagens em tempo real |
+| Coleção               | Descrição                                                 |
+| --------------------- | --------------------------------------------------------- |
+| `users`               | Perfis de usuários (client\|provider)                     |
+| `providers`           | Dados do prestador (disponibilidade, localização, rating) |
+| `service_requests`    | Solicitações com status em tempo real                     |
+| `reviews`             | Avaliações dos serviços                                   |
+| `chats`               | Conversas vinculadas a solicitações                       |
+| `chats/{id}/messages` | Mensagens em tempo real                                   |
 
 ---
 
