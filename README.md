@@ -155,13 +155,13 @@ constants/
 ## 📸 Screenshots
 
 - **Início:**
-    <img src="assets/screenshots/inicio.jpeg" alt="Início" style="max-width:420px;width:100%;height:auto;border-radius:8px;margin:8px 0;">
+  <img src="assets/screenshots/inicio.jpeg" alt="Início" style="max-width:420px;width:100%;height:auto;border-radius:8px;margin:8px 0;">
 
 - **Categorias:**
-    <img src="assets/screenshots/categorias.jpeg" alt="Categorias" style="max-width:420px;width:100%;height:auto;border-radius:8px;margin:8px 0;">
+  <img src="assets/screenshots/categorias.jpeg" alt="Categorias" style="max-width:420px;width:100%;height:auto;border-radius:8px;margin:8px 0;">
 
 - **Histórico:**
-    <img src="assets/screenshots/historico.jpeg" alt="Histórico" style="max-width:420px;width:100%;height:auto;border-radius:8px;margin:8px 0;">
+  <img src="assets/screenshots/historico.jpeg" alt="Histórico" style="max-width:420px;width:100%;height:auto;border-radius:8px;margin:8px 0;">
 
 - **Perfil:**
-    <img src="assets/screenshots/perfil.jpeg" alt="Perfil" style="max-width:420px;width:100%;height:auto;border-radius:8px;margin:8px 0;">
+  <img src="assets/screenshots/perfil.jpeg" alt="Perfil" style="max-width:420px;width:100%;height:auto;border-radius:8px;margin:8px 0;">
