@@ -9,7 +9,7 @@ import SplashView from "@/components/SplashView";
 export default function Index() {
   const { isAuthenticated, isLoading, user } = useAuthStore();
 
-  // Exibe spinner enquanto Firebase verifica sessão
+  // Exibe spinner enquanto Supabase verifica sessão
   if (isLoading) {
     return <SplashView />;
   }

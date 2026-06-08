@@ -50,7 +50,7 @@ export const useRequestStore = create<RequestState>((set, get) => ({
     set({ selectedProvider: provider });
   },
 
-  // Envia a solicitação para o Firestore
+  // Envia a solicitação para o Supabase
   sendRequest: async (clientId, location, message) => {
     const { selectedProvider, serviceDescription, isUrgent } = get();
     if (!selectedProvider) throw new Error("Nenhum prestador selecionado");

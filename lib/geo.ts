@@ -5,7 +5,7 @@
 
 const EARTH_RADIUS_KM = 6371;
 
-// Gera geohash simples (delegado ao Firestore diretamente)
+// Gera geohash simples a partir de coordenadas
 export const encodeGeohash = (_lat: number, _lng: number): string => {
   return `${_lat.toFixed(4)},${_lng.toFixed(4)}`;
 };
@@ -46,7 +46,7 @@ export const estimateETA = (km: number): string => {
   return `${hours}h${mins > 0 ? ` ${mins}min` : ""}`;
 };
 
-// Converte GeoPoint do Firestore para array de coordenadas
+// Converte objeto de coordenadas para array [lat, lng]
 export const geoPointToCoords = (point: {latitude: number, longitude: number}): [number, number] => {
   return [point.latitude, point.longitude];
 };

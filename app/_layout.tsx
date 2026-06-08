@@ -1,5 +1,5 @@
 // Root Layout — VaptVupt
-// Inicializa fontes, Firebase Auth listener e define a estrutura de navegação
+// Inicializa fontes, Supabase Auth listener e define a estrutura de navegação
 
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";

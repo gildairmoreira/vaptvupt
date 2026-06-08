@@ -1,167 +1,165 @@
-# VaptVupt — Marketplace de Serviços Geolocalizados
+<p align="center">
+  <img src="assets/logo-sem-borda.png" alt="VaptVupt" width="120" />
+</p>
 
-**Stack:** React Native + Expo · Firebase · Geoapify
+<h1 align="center">VaptVupt</h1>
+
+<p align="center">
+  <strong>O marketplace que conecta quem precisa de um serviço a quem resolve — em tempo real e perto de você.</strong>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/React_Native-0.74-61DAFB?style=flat-square&logo=react" />
+  <img src="https://img.shields.io/badge/Expo-SDK_51-000020?style=flat-square&logo=expo" />
+  <img src="https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat-square&logo=supabase" />
+  <img src="https://img.shields.io/badge/TypeScript-5.3-3178C6?style=flat-square&logo=typescript" />
+  <img src="https://img.shields.io/badge/Zustand-State-443E38?style=flat-square" />
+</p>
 
 ---
 
-## 🚀 Setup Rápido
+## 💡 O Problema
 
-### 1. Instalar dependências
+No Brasil, **encontrar um prestador de serviço confiável** (encanador, eletricista, faxineira) é uma experiência frustrante: ligações para números desconhecidos, orçamentos vagos, atrasos, e zero transparência. O cliente não sabe quem está contratando — e o prestador não tem uma vitrine para mostrar seu trabalho.
+
+## 🚀 A Solução
+
+**VaptVupt** é um marketplace mobile de serviços geolocalizados que opera em tempo real. O cliente descreve o que precisa, vê prestadores disponíveis por perto no mapa, solicita o serviço e acompanha tudo — da aceitação ao chat, do tracking ao pagamento — em uma experiência fluida e transparente.
+
+Para o prestador, é uma plataforma completa: dashboard com métricas, carteira de ganhos, gestão de anúncios e visibilidade imediata para clientes da sua região.
+
+---
+
+## 📸 Conheça o App
+
+<p align="center">
+  <img src="assets/screenshots/inicio.jpeg" alt="Início" width="200" style="border-radius:12px;margin:4px;" />
+  <img src="assets/screenshots/categorias.jpeg" alt="Categorias" width="200" style="border-radius:12px;margin:4px;" />
+  <img src="assets/screenshots/historico.jpeg" alt="Histórico" width="200" style="border-radius:12px;margin:4px;" />
+  <img src="assets/screenshots/perfil.jpeg" alt="Perfil" width="200" style="border-radius:12px;margin:4px;" />
+</p>
+
+---
+
+## ⚙️ Stack Tecnológica
+
+| Camada            | Tecnologia                                                   | Por quê?                                                |
+| ----------------- | ------------------------------------------------------------ | ------------------------------------------------------- |
+| **App**           | React Native 0.74 + Expo SDK 51                              | Uma codebase, iOS + Android + Web                       |
+| **Navegação**     | Expo Router (file-based)                                     | Routing declarativo baseado na estrutura de pastas       |
+| **Backend**       | Supabase (PostgreSQL + Auth + Realtime + Storage)            | BaaS completo, open source, com Realtime nativo         |
+| **Estado**        | Zustand                                                      | State management leve, sem boilerplate                   |
+| **Estilização**   | NativeWind (Tailwind CSS)                                    | Utility-first adaptado para React Native                 |
+| **Geocoding**     | Geoapify                                                     | Autocomplete + geocoding reverso (3K req/dia grátis)     |
+| **Build**         | EAS Build (Expo)                                             | CI/CD nativo para APK/IPA sem config de Gradle/Xcode     |
+
+---
+
+## 🧩 O Que o VaptVupt Faz
+
+### Para o Cliente
+- 🗺️ **Descobre prestadores no mapa** — busca por categoria, nome ou localização com autocomplete inteligente
+- ⚡ **Solicita serviço em tempo real** — com tracking de status ao vivo (pending → accepted → on_the_way → completed)
+- 💬 **Chat direto** com o prestador vinculado à solicitação
+- ⭐ **Avalia o serviço** — rating de 1 a 5 estrelas com trigger automático de atualização de nota no banco
+- 📜 **Histórico completo** de todos os serviços solicitados
+
+### Para o Prestador
+- 📊 **Dashboard** com métricas do dia (ganhos, serviços realizados, nota média)
+- 🔔 **Feed de solicitações** pendentes na região — aceitar ou recusar com um toque
+- 💼 **Vitrine de serviços** — cadastro de anúncios em 4 etapas (categoria, descrição, preço, localização)
+- 💰 **Carteira** com saldo acumulado
+- 🟢 **Toggle de disponibilidade** — fica visível no mapa apenas quando ativo
+
+### Segurança & Infraestrutura
+- 🔒 **Row Level Security (RLS)** em todas as tabelas — cada usuário só acessa seus próprios dados
+- 📡 **Supabase Realtime** — `postgres_changes` em 5 tabelas para atualizações instantâneas
+- 🖼️ **Supabase Storage** — upload de fotos de perfil com URL pública automática
+- 🎨 **Design System próprio** ("Kinetic Layer") — tokens de cor, tipografia, espaçamento e sombras
+
+---
+
+## 🛢️ Modelo de Dados
+
+7 tabelas PostgreSQL com RLS, triggers e Realtime habilitado:
+
+```
+users ──────────── providers ──────── provider_services
+  │                    │
+  │                    ├── service_requests
+  │                    │         │
+  │                    │         ├── reviews
+  │                    │         │
+  │                    │         └── chats ── messages
+  │                    │
+  └────────────────────┘
+```
+
+| Tabela              | Função                                                       |
+| ------------------- | ------------------------------------------------------------ |
+| `users`             | Perfis (client \| provider) com auth vinculado ao Supabase   |
+| `providers`         | Disponibilidade, localização, rating, saldo                  |
+| `provider_services` | Anúncios individuais de serviço                              |
+| `service_requests`  | Solicitações com ciclo de vida em tempo real                  |
+| `reviews`           | Avaliações (trigger auto-recalcula rating do provider)       |
+| `chats`             | Conversas vinculadas a solicitações                          |
+| `messages`          | Mensagens em tempo real entre cliente e prestador            |
+
+Schema completo: [`supabase_schema.sql`](./supabase_schema.sql)
+
+---
+
+## 🏃 Começando
 
 ```bash
+# 1. Instalar dependências
 npm install
-```
 
-### 2. Configurar variáveis de ambiente
+# 2. Configurar variáveis de ambiente (.env)
+EXPO_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=sua_anon_key
+EXPO_PUBLIC_GEOAPIFY_API_KEY=sua_chave_geoapify
 
-Edite o arquivo `.env` com suas chaves reais (já configurado com as chaves do projeto `vaptvupt-prod`):
+# 3. Executar o supabase_schema.sql no SQL Editor do Supabase Dashboard
 
-```env
-EXPO_PUBLIC_FIREBASE_API_KEY=...
-EXPO_PUBLIC_FIREBASE_PROJECT_ID=vaptvupt-prod
-EXPO_PUBLIC_GEOAPIFY_API_KEY=...
-```
-
-### 3. Rodar localmente
-
-```bash
-# Web (desenvolvimento)
-npx expo start --web
-
-# Android via Expo Go
-npx expo start --android
-
-# iOS via Expo Go
-npx expo start --ios
+# 4. Rodar
+npx expo start
 ```
 
 ---
 
-## 🔒 Deploy das Regras de Segurança Firebase
-
-### Pré-requisitos
-
-```bash
-npm install -g firebase-tools
-firebase login
-firebase use vaptvupt-prod
-```
-
-### Deploy rules + indexes
-
-```bash
-firebase deploy --only firestore:rules,firestore:indexes,storage
-```
-
----
-
-## 🗂️ Estrutura do Projeto
+## 📂 Estrutura do Projeto
 
 ```
 app/
-├── (auth)/
-│   ├── welcome.tsx        # Onboarding 4 slides
-│   ├── sign-in.tsx        # Login
-│   └── sign-up.tsx        # Cadastro + seleção de role
-├── (client)/
-│   ├── index.tsx          # Home com categorias + prestadores
-│   ├── map.tsx            # Mapa + busca Geoapify + autocomplete
-│   ├── provider/[id].tsx  # Detalhe do prestador
-│   ├── request/[id].tsx   # Tracking em tempo real
-│   ├── rate/[id].tsx      # Avaliação + tela de sucesso
-│   ├── chat/[id].tsx      # Chat em tempo real
-│   ├── history.tsx        # Histórico de serviços
-│   └── profile.tsx        # Perfil + upload de foto
-└── (provider)/
-    ├── index.tsx          # Dashboard + toggle disponibilidade
-    ├── wallet.tsx         # Carteira
-    ├── profile.tsx        # Perfil do prestador
-    ├── request/[id].tsx   # Aceitar/recusar solicitação
-    └── service/create.tsx # Criar anúncio de serviço
+├── (auth)/         → Onboarding, login, cadastro
+├── (client)/       → Home, mapa, detalhe, tracking, chat, avaliação, histórico, perfil
+└── (provider)/     → Dashboard, carteira, serviços, solicitações, perfil
 
-lib/
-├── firebase.ts    # Configuração Firebase
-├── firestore.ts   # CRUD + listeners onSnapshot
-├── geo.ts         # Haversine distance + ETA
-├── geoapify.ts    # Geocoding + autocomplete
-└── storage.ts     # Upload de fotos Firebase Storage
-
-store/
-├── useAuthStore.ts     # Auth + perfil do usuário
-├── useRequestStore.ts  # Ciclo de vida de solicitações
-└── useProviderStore.ts # Dashboard do prestador
-
-constants/
-├── theme.ts        # Kinetic Layer design tokens
-└── localization.ts # Strings PT-BR
+lib/                → Supabase client, database CRUD, geocoding, storage, geo utils
+store/              → Zustand stores (auth, requests, provider, settings)
+components/         → UI reutilizável (botões, inputs, banners, splash)
+constants/          → Design tokens (Kinetic Layer), ícones, localização PT-BR
+types/              → Interfaces TypeScript
 ```
 
 ---
 
-## 🎨 Design System — Kinetic Layer
+## 📦 Build & Deploy
 
-| Token          | Valor                      |
-| -------------- | -------------------------- |
-| `primary`      | `#d83900` (laranja)        |
-| `secondary`    | `#0058bc` (azul confiança) |
-| `surface`      | `#f9f9f9`                  |
-| `radius.full`  | 9999 (botões pill)         |
-| Sem bordas 1px | Hierarquia por cor/sombra  |
+```bash
+# Desenvolvimento
+npx expo start
 
----
+# APK de preview
+eas build --profile preview --platform android
 
-## 📊 Coleções Firestore
-
-| Coleção               | Descrição                                                 |
-| --------------------- | --------------------------------------------------------- |
-| `users`               | Perfis de usuários (client\|provider)                     |
-| `providers`           | Dados do prestador (disponibilidade, localização, rating) |
-| `service_requests`    | Solicitações com status em tempo real                     |
-| `reviews`             | Avaliações dos serviços                                   |
-| `chats`               | Conversas vinculadas a solicitações                       |
-| `chats/{id}/messages` | Mensagens em tempo real                                   |
+# Build de produção
+eas build --profile production --platform android
+```
 
 ---
 
-## ✅ Features Implementadas (MVP)
-
-- [x] Onboarding 4 slides (Kinetic Layer)
-- [x] Auth Firebase (email/senha + Google OAuth)
-- [x] Dual-role: Cliente ↔ Prestador (switch no perfil)
-- [x] Home com categorias e prestadores disponíveis em tempo real
-- [x] Mapa com Geoapify Autocomplete + geocoding reverso
-- [x] Detalhe do prestador (ETA, preço, verificado, avaliações)
-- [x] Solicitação de serviço → tracking em tempo real (Firestore onSnapshot)
-- [x] Chat entre cliente e prestador (Firestore mensagens)
-- [x] Avaliação do serviço (5 estrelas + tela de sucesso)
-- [x] Histórico de serviços
-- [x] Dashboard do prestador (toggle, métricas, feed de pedidos)
-- [x] Aceitar/recusar solicitações
-- [x] Upload de foto de perfil (Firebase Storage)
-- [x] Criar anúncio de serviço (4 etapas)
-- [x] Regras de segurança Firestore + Storage
-- [x] Índices compostos Firestore
-
-## 🔜 Próximas Iterações
-
-- [ ] Push Notifications via FCM
-- [ ] Pagamentos (Pix via API ou integração futura)
-- [ ] Geoapify Isoline para busca por raio preciso
-- [ ] Histórico de ganhos do prestador
-- [ ] Chat no painel do prestador
-
----
-
-## 📸 Screenshots
-
-- **Início:**
-  <img src="assets/screenshots/inicio.jpeg" alt="Início" style="max-width:420px;width:100%;height:auto;border-radius:8px;margin:8px 0;">
-
-- **Categorias:**
-  <img src="assets/screenshots/categorias.jpeg" alt="Categorias" style="max-width:420px;width:100%;height:auto;border-radius:8px;margin:8px 0;">
-
-- **Histórico:**
-  <img src="assets/screenshots/historico.jpeg" alt="Histórico" style="max-width:420px;width:100%;height:auto;border-radius:8px;margin:8px 0;">
-
-- **Perfil:**
-  <img src="assets/screenshots/perfil.jpeg" alt="Perfil" style="max-width:420px;width:100%;height:auto;border-radius:8px;margin:8px 0;">
+<p align="center">
+  <strong>VaptVupt</strong> — Resolveu? Avaliou. Simples assim. ⚡
+</p>
